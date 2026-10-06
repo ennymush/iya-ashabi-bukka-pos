@@ -1,0 +1,48 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header %}
+{% block title %}Role Permissions - {{ business.name }}{% endblock %}
+{% block topbar_title %}Role Permissions{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Role Permissions',
+                    'Decide exactly what each role may do. Administrators always have every permission.') %}
+  <a class="btn btn-primary" href="{{ url_for('staff.list_staff') }}">BACK TO STAFF</a>
+{% endcall %}
+
+{% for role in roles %}
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="role_id" value="{{ role.id }}">
+  <div class="card-head">
+    <h2>{{ role.name|title }} Permissions</h2>
+    <span class="badge badge-muted">{{ role.permissions|length }} granted</span>
+  </div>
+  {% if role.description %}<p class="help">{{ role.description }}</p>{% endif %}
+
+  <div class="form-grid">
+    {% for group, items in grouped.items() %}
+    <div class="card" style="box-shadow:none;border:1px solid var(--line);">
+      <div class="card-head"><h2>{{ group }}</h2></div>
+      <div>
+        {% for item in items %}
+          <div class="check">
+            <input type="checkbox" id="perm_{{ item.key }}" name="permissions" value="{{ item.key }}"
+                   {{ 'checked' if item.key in role.granted }}>
+            <label for="perm_{{ item.key }}">
+              {{ item.description }}
+              <span class="help">{{ item.key }}</span>
+            </label>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="form-actions">
+    <span></span>
+    <button type="submit" class="btn btn-primary">SAVE {{ role.name }} PERMISSIONS</button>
+  </div>
+</form>
+{% endfor %}
+{% endblock %}

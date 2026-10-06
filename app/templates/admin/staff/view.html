@@ -1,0 +1,125 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, status_badge %}
+{% block title %}{{ staff.full_name }} - {{ business.name }}{% endblock %}
+{% block topbar_title %}Staff Details{% endblock %}
+
+{% block admin_content %}
+{% call page_header(staff.full_name, 'Username: ' ~ staff.username) %}
+  {% if g.user.has_any_permission('staff.manage') %}
+    <a class="btn btn-ghost" href="{{ url_for('staff.edit_staff', user_id=staff.id) }}">EDIT</a>
+    <a class="btn btn-ghost" href="{{ url_for('staff.reset_password', user_id=staff.id) }}">RESET PASSWORD</a>
+    <form method="post" action="{{ url_for('staff.toggle_active', user_id=staff.id) }}" style="display:inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-ghost">
+        {{ 'DEACTIVATE' if staff.is_active else 'ACTIVATE' }}
+      </button>
+    </form>
+  {% endif %}
+  <a class="btn btn-primary" href="{{ url_for('staff.list_staff') }}">BACK TO STAFF</a>
+{% endcall %}
+
+{% if not staff.is_active %}
+  <div class="hint-box">
+    This account is <strong>inactive</strong> and cannot sign in. Their past sales are still
+    linked to them and still appear in every report.
+  </div>
+{% endif %}
+
+<div class="stat-grid">
+  {{ stat_card('Role', staff.role_name, 'gold') }}
+  {{ stat_card('Status', 'Active' if staff.is_active else 'Inactive', 'green' if staff.is_active else 'red') }}
+  {{ stat_card('Transactions', stats.transactions, 'brown') }}
+  {{ stat_card('Total sales', (stats.total_sales|int / 100)|money_minor, 'green') }}
+  {{ stat_card('Today', (stats.today_sales|int / 100)|money_minor, 'orange') }}
+  {{ stat_card('Last login', stats.last_login.strftime('%d/%m/%Y %H:%M') if stats.last_login else 'Never', 'brown') }}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Account information</h2>{{ status_badge('ACTIVE' if staff.is_active else 'INACTIVE') }}</div>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td>Full name</td><td>{{ staff.full_name }}</td></tr>
+        <tr><td>Username</td><td>{{ staff.username }}</td></tr>
+        <tr><td>Role</td><td>{{ staff.role_name }}</td></tr>
+        <tr><td>Phone</td><td>{{ staff.phone or '-' }}</td></tr>
+        <tr><td>Email</td><td>{{ staff.email or '-' }}</td></tr>
+        <tr><td>Maximum discount</td>
+            <td>{{ staff.max_discount_percent or 0 }}% / {{ staff.max_discount_amount|money }}</td></tr>
+        <tr><td>Created</td><td>{{ staff.created_at.strftime('%d/%m/%Y %H:%M') if staff.created_at else '-' }}</td></tr>
+        <tr><td>Deactivated</td><td>{{ staff.deactivated_at.strftime('%d/%m/%Y %H:%M') if staff.deactivated_at else '-' }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Recent transactions</h2></div>
+  {% if sales %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Receipt</th><th>Date</th><th>Time</th><th class="num">Items</th>
+                 <th class="num">Total</th><th>Payment</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for sale in sales %}
+        <tr>
+          <td><a href="{{ url_for('sales.transaction_detail', sale_id=sale.id) }}">{{ sale.receipt_number }}</a></td>
+          <td>{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ sale.sale_time }}</td>
+          <td class="num">{{ sale.item_count }}</td>
+          <td class="num">{{ sale.total_amount|money }}</td>
+          <td>{{ sale.payment_method }}</td>
+          <td>{{ status_badge(sale.status) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty"><h3>No transactions yet.</h3></div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Shifts</h2></div>
+  {% if shifts %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Opened</th><th>Closed</th><th class="num">Opening</th>
+                 <th class="num">Sales</th><th class="num">Variance</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for shift in shifts %}
+        <tr>
+          <td>{{ shift.opened_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ shift.closed_at.strftime('%d/%m/%Y %H:%M') if shift.closed_at else '-' }}</td>
+          <td class="num">{{ shift.opening_cash|money }}</td>
+          <td class="num">{{ shift.total_sales|money }}</td>
+          <td class="num">{{ shift.variance|money if shift.variance is not none else '-' }}</td>
+          <td>{{ status_badge('OPEN' if shift.is_open else 'CLOSED') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty"><h3>No shifts recorded.</h3></div>
+  {% endif %}
+</div>
+
+{% if deletable and g.user.has_any_permission('staff.manage') %}
+<div class="danger-zone">
+  <h2>Delete this account</h2>
+  <p>Safe to delete because this account has never been used. If they have any sales,
+     deactivate them instead so the history is preserved.</p>
+  <form method="post" action="{{ url_for('staff.delete_staff', user_id=staff.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-danger" type="submit"
+            onclick="return confirm('Delete {{ staff.full_name }} permanently?')">DELETE ACCOUNT</button>
+  </form>
+</div>
+{% elif not deletable %}
+<div class="info-box">
+  <strong>Cannot delete:</strong> {{ delete_reason }}
+</div>
+{% endif %}
+{% endblock %}

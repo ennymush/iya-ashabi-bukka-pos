@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_ui.html" import page_header, empty_state, status_badge %}
+{% block title %}My Transactions - {{ business.name }}{% endblock %}
+{% block body_class %}pos-body{% endblock %}
+
+{% block content %}
+<div class="page pos-list-page">
+  {% call page_header('My Transactions', 'Every sale you have completed on this till.') %}
+    <a class="btn btn-primary" href="{{ url_for('pos.index') }}">Back to POS</a>
+  {% endcall %}
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Recent sales</h2>
+      <form method="get" class="filter-extra">
+        <label class="help" for="status">Status</label>
+        <select id="status" name="status" onchange="this.form.submit()">
+          <option value="">All</option>
+          {% for value in ['COMPLETED', 'VOIDED', 'REFUNDED'] %}
+            <option value="{{ value }}" {{ 'selected' if request.args.get('status') == value }}>{{ value }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-sm">Apply</button></noscript>
+      </form>
+    </div>
+
+    {% if sales.items %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Receipt</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Items</th>
+            <th>Payment</th>
+            <th class="num">Total</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale in sales.items %}
+          <tr>
+            <td>{{ sale.receipt_number }}</td>
+            <td>{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
+            <td>{{ sale.sale_time }}</td>
+            <td class="num">{{ sale.item_count }}</td>
+            <td>{{ sale.payment_method }}</td>
+            <td class="num">{{ sale.total_amount|money }}</td>
+            <td>{{ status_badge(sale.status) }}</td>
+            <td class="num">
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('pos.my_transaction_detail', sale_id=sale.id) }}">VIEW</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      {{ empty_state('No transactions yet.', 'Sales you complete will appear here.') }}
+    {% endif %}
+  </div>
+
+  {% from "_ui.html" import pagination %}
+  {{ pagination(sales, url_for('pos.my_transactions')) }}
+</div>
+{% endblock %}

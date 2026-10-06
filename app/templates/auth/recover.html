@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Reset Password - {{ business.name }}{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block chrome %}{% endblock %}
+
+{% block content %}
+<div class="login-card">
+  <div class="login-brand">
+    <div class="brand-mark" aria-hidden="true">IAB</div>
+    <h1>Reset Password</h1>
+    <div class="tagline">Account: {{ username }}</div>
+  </div>
+
+  <form method="post" autocomplete="off" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="field">
+      <label for="recovery_code">Recovery code</label>
+      <input type="text" id="recovery_code" name="recovery_code"
+             autocapitalize="characters" spellcheck="false" required autofocus
+             placeholder="IAB-XXXX-XXXX-XXXX">
+      <span class="help">The code the system owner was given during installation.</span>
+    </div>
+
+    <div class="field">
+      <label for="new_password">New password</label>
+      <input type="password" id="new_password" name="new_password"
+             autocomplete="new-password" required>
+    </div>
+
+    <div class="field">
+      <label for="confirm_password">Confirm new password</label>
+      <input type="password" id="confirm_password" name="confirm_password"
+             autocomplete="new-password" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg btn-block">RESET PASSWORD</button>
+  </form>
+
+  <div class="login-links">
+    <a href="{{ url_for('auth.login') }}">Back to sign in</a>
+  </div>
+</div>
+{% endblock %}

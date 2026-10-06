@@ -1,0 +1,59 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, empty_state, pagination %}
+{% block title %}Stock Adjustments - {{ business.name }}{% endblock %}
+{% block topbar_title %}Stock Adjustments{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Stock Adjustments', 'A full audit trail of every stock movement, including sales and voids.') %}
+  <a class="btn btn-primary" href="{{ url_for('inventory.stock_list') }}">MANAGE STOCK</a>
+{% endcall %}
+
+<form method="get" class="filter-bar">
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Product name or reference">
+    <select name="reason">
+      <option value="">All reasons</option>
+      {% for reason in reasons %}
+        <option value="{{ reason }}" {{ 'selected' if request.args.get('reason') == reason }}>{{ reason }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">SEARCH</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if movements.items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Date / Time</th><th>Product</th><th>Reason</th>
+            <th class="num">Before</th><th class="num">Change</th><th class="num">After</th>
+            <th>By</th><th>Reference</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        {% for movement in movements.items %}
+        <tr>
+          <td>{{ movement.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ movement.product.name if movement.product else '-' }}</td>
+          <td><span class="badge badge-muted">{{ movement.reason }}</span></td>
+          <td class="num">{{ movement.old_quantity }}</td>
+          <td class="num">
+            <span class="badge {{ 'badge-success' if movement.difference > 0 else ('badge-danger' if movement.difference < 0 else 'badge-muted') }}">
+              {{ '%+d'|format(movement.difference) }}
+            </span>
+          </td>
+          <td class="num">{{ movement.new_quantity }}</td>
+          <td>{{ movement.user.full_name if movement.user else '-' }}</td>
+          <td class="help">{{ movement.reference or '-' }}</td>
+          <td class="help">{{ movement.note or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(movements, url_for('inventory.adjustments')) }}
+  {% else %}
+    {{ empty_state('No stock movements recorded yet.') }}
+  {% endif %}
+</div>
+{% endblock %}

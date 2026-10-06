@@ -1,0 +1,61 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, date_range_filter, empty_state, pagination %}
+{% block title %}Audit Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Audit Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Audit Report', 'A traceable record of every sensitive action. Passwords are never stored here.') %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='audit') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.audit_report'), start, end, preset) }}
+
+<form method="get" class="filter-bar">
+  <input type="hidden" name="range" value="{{ preset }}">
+  <div class="filter-dates">
+    <select name="action">
+      <option value="">All actions</option>
+      {% for action in actions %}
+        <option value="{{ action }}" {{ 'selected' if request.args.get('action') == action }}>{{ action }}</option>
+      {% endfor %}
+    </select>
+    <select name="user_id">
+      <option value="">All users</option>
+      {% for member in users %}
+        <option value="{{ member.id }}" {{ 'selected' if request.args.get('user_id')|int == member.id }}>{{ member.full_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">FILTER</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Date / Time</th><th>User</th><th>Role</th><th>Action</th>
+            <th>Entity</th><th>Description</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ row.username or '-' }}</td>
+          <td>{{ row.role or '-' }}</td>
+          <td><span class="badge badge-info">{{ row.action }}</span></td>
+          <td class="help">{{ row.entity_type }}{% if row.entity_id %} #{{ row.entity_id }}{% endif %}</td>
+          <td>{{ row.description }}</td>
+          <td class="help">{{ row.ip or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No audit entries in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

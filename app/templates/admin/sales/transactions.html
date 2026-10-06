@@ -1,0 +1,121 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, status_badge, empty_state, pagination %}
+{% block title %}Transactions - {{ business.name }}{% endblock %}
+{% block topbar_title %}Transactions{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Transactions', 'Search and filter every sale on this system.') %}
+  <a class="btn btn-ghost" href="{{ url_for('sales.returns_list') }}">RETURNS</a>
+  <a class="btn btn-ghost" href="{{ url_for('sales.voids_list') }}">VOIDS</a>
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='sales') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('sales.transactions'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Transactions', totals.count, 'gold') }}
+  {{ stat_card('Subtotal', (totals.subtotal|int / 100)|money_minor, 'brown') }}
+  {{ stat_card('Discounts', (totals.discount|int / 100)|money_minor, 'orange') }}
+  {{ stat_card('Total', (totals.total|int / 100)|money_minor, 'green') }}
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="hidden" name="range" value="{{ preset }}">
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Receipt, cashier or product">
+    <input type="text" name="receipt" value="{{ request.args.get('receipt', '') }}" placeholder="Receipt number">
+    <select name="cashier_id">
+      <option value="">All cashiers</option>
+      {% for cashier in cashiers %}
+        <option value="{{ cashier.id }}" {{ 'selected' if request.args.get('cashier_id')|int == cashier.id }}>{{ cashier.full_name }}</option>
+      {% endfor %}
+    </select>
+    <select name="payment">
+      <option value="">All payments</option>
+      {% for method in payment_methods %}
+        <option value="{{ method }}" {{ 'selected' if request.args.get('payment') == method }}>{{ method }}</option>
+      {% endfor %}
+    </select>
+    <select name="status">
+      <option value="">All statuses</option>
+      {% for value in ['COMPLETED', 'VOIDED', 'REFUNDED', 'HELD', 'CANCELLED'] %}
+        <option value="{{ value }}" {{ 'selected' if request.args.get('status') == value }}>{{ value }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">SEARCH</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if sales.items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Receipt</th><th>Date</th><th>Time</th><th>Cashier</th>
+          <th class="num">Items</th><th class="num">Subtotal</th><th class="num">Discount</th>
+          <th class="num">Total</th><th>Payment</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in sales.items %}
+        <tr>
+          <td>{{ sale.receipt_number }}</td>
+          <td>{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ sale.sale_time }}</td>
+          <td>{{ sale.cashier_name }}</td>
+          <td class="num">{{ sale.item_count }}</td>
+          <td class="num">{{ sale.subtotal|money }}</td>
+          <td class="num">{{ sale.discount_amount|money }}</td>
+          <td class="num"><strong>{{ sale.total_amount|money }}</strong></td>
+          <td>{{ sale.payment_method }}</td>
+          <td>{{ status_badge(sale.status) }}</td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('sales.transaction_detail', sale_id=sale.id) }}">VIEW</a>
+            {% if sale.status == 'COMPLETED' %}
+              {% if g.user.has_any_permission('sales.print') %}
+                <button class="btn btn-ghost btn-sm" type="button" onclick="reprint({{ sale.id }}, this)">PRINT</button>
+              {% endif %}
+              {% if g.user.has_any_permission('sales.void') %}
+                <form method="post" action="{{ url_for('sales.void_transaction', sale_id=sale.id) }}" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-ghost btn-sm" onclick="return confirm('Void {{ sale.receipt_number }}? Stock will be restored.')">VOID</button>
+                </form>
+              {% endif %}
+              {% if g.user.has_any_permission('sales.refund') %}
+                <a class="btn btn-ghost btn-sm" href="{{ url_for('sales.refund_transaction', sale_id=sale.id) }}">REFUND</a>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(sales, url_for('sales.transactions')) }}
+  {% else %}
+    {{ empty_state('No transactions match these filters.') }}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+async function reprint(saleId, button) {
+  const token = '{{ csrf_token() }}';
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = '...';
+  const response = await fetch(`/admin/sales/transactions/${saleId}/print-receipt`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': token},
+    body: 'csrf_token=' + encodeURIComponent(token),
+  });
+  const data = await response.json();
+  button.textContent = data.ok ? 'PRINTED' : 'FAILED';
+  setTimeout(() => { button.textContent = original; button.disabled = false; }, 2000);
+}
+</script>
+{% endblock %}

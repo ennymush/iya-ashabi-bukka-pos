@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }} - {{ business.name }}{% endblock %}
+{% block body_class %}error-page{% endblock %}
+{% block content %}
+<div class="card" style="max-width:560px;margin:3rem auto;text-align:center;">
+  <div style="font-size:3.5rem;font-weight:800;color:var(--orange-500);line-height:1;">{{ code }}</div>
+  <h1 style="margin-top:.5rem;">
+    {% if code == 403 %}Not Allowed
+    {% elif code == 404 %}Page Not Found
+    {% elif code == 400 %}Bad Request
+    {% else %}Something Went Wrong{% endif %}
+  </h1>
+  <p style="color:var(--grey-500);font-size:1rem;">{{ message }}</p>
+  <div style="display:flex;gap:.5rem;justify-content:center;margin-top:1.5rem;flex-wrap:wrap;">
+    <a href="{{ url_for('pos.index') }}" class="btn btn-primary">Go to POS</a>
+    <a href="/login" class="btn btn-ghost">Sign In</a>
+  </div>
+</div>
+{% endblock %}

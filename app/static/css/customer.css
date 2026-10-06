@@ -1,0 +1,77 @@
+/* ===================================================================
+   Customer display - landscape, fullscreen, high contrast, read-only.
+   =================================================================== */
+.customer-body {
+  margin: 0; background: linear-gradient(160deg, var(--brown-900) 0%, var(--brown-800) 60%, #7A4E22 100%);
+  color: #fff; height: 100vh; overflow: hidden; font-family: var(--font);
+}
+.cust-screen { height: 100vh; display: flex; flex-direction: column; }
+.cust-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 2rem; border-bottom: 2px solid rgba(255, 255, 255, .12); gap: 1rem;
+}
+.cust-brand { display: flex; align-items: center; gap: .9rem; }
+.cust-brand img { height: 58px; width: auto; border-radius: 10px; background: #fff; padding: 4px; object-fit: contain; }
+.cust-brand h1 { color: #fff; font-size: 1.5rem; margin: 0; }
+.cust-brand .tag { color: var(--gold-500); font-size: .95rem; font-weight: 600; letter-spacing: .05em; }
+.cust-datetime { text-align: right; font-size: .95rem; color: rgba(255,255,255,.8); line-height: 1.4; }
+
+.cust-body { flex: 1; overflow: hidden; padding: 1rem 2rem; display: flex; flex-direction: column; }
+.cust-table { width: 100%; border-collapse: collapse; font-size: 1.05rem; }
+.cust-table thead th {
+  color: var(--gold-500); text-align: left; padding: .45rem .6rem;
+  border-bottom: 2px solid rgba(255,255,255,.2); font-size: .8rem;
+  text-transform: uppercase; letter-spacing: .08em; font-weight: 700;
+}
+.cust-table td { padding: .5rem .6rem; border-bottom: 1px solid rgba(255,255,255,.1); }
+.cust-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.cust-table .item-name { font-weight: 600; }
+.cust-table .item-qty { color: var(--gold-500); font-weight: 700; }
+
+.cust-totals { margin-top: auto; padding-top: 1rem; }
+.cust-tot-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: .35rem 0; font-size: 1.05rem; color: rgba(255,255,255,.85);
+}
+.cust-tot-row .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.cust-tot-row.grand {
+  border-top: 3px solid var(--orange-500); margin-top: .6rem; padding-top: .7rem;
+  font-size: 1.5rem; color: #fff;
+}
+.cust-tot-row.grand .lbl { font-weight: 800; letter-spacing: .04em; }
+.cust-tot-row.grand .val { font-weight: 800; color: var(--gold-500); font-size: 2rem; }
+.cust-tot-row.discount .val { color: #7FD1A0; }
+
+/* Welcome / thank-you states */
+.cust-hero {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: 1rem;
+}
+.cust-hero .big { font-size: 4rem; font-weight: 800; color: #fff; letter-spacing: .02em; line-height: 1.1; }
+.cust-hero .mid { font-size: 1.7rem; color: var(--gold-500); font-weight: 700; }
+.cust-hero .small { font-size: 1.1rem; color: rgba(255,255,255,.8); max-width: 46ch; line-height: 1.5; }
+.cust-hero img.promo { max-height: 200px; border-radius: 14px; object-fit: cover; }
+
+.cust-payment { text-align: center; }
+.cust-payment .total-label { font-size: 1.2rem; color: rgba(255,255,255,.8); letter-spacing: .08em; text-transform: uppercase; }
+.cust-payment .total { font-size: 4.5rem; font-weight: 800; color: var(--gold-500); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cust-payment .row { margin-top: 1rem; }
+.cust-payment .paid-label { font-size: 1rem; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: .08em; }
+.cust-payment .paid { font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cust-payment .change-label { font-size: 1rem; color: #7FD1A0; text-transform: uppercase; letter-spacing: .08em; margin-top: 1rem; }
+.cust-payment .change { font-size: 3rem; font-weight: 800; color: #7FD1A0; font-variant-numeric: tabular-nums; }
+
+.cust-footer {
+  padding: .8rem 2rem; border-top: 2px solid rgba(255,255,255,.12);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: .85rem; color: rgba(255,255,255,.65); flex-wrap: wrap; gap: .6rem;
+}
+.cust-checkmark { color: var(--green-500); font-size: 4.5rem; }
+.cust-spinner { color: var(--gold-500); font-size: 3rem; }
+
+@media (max-width: 1024px) {
+  .cust-brand h1 { font-size: 1.15rem; }
+  .cust-hero .big { font-size: 2.4rem; }
+  .cust-payment .total { font-size: 3rem; }
+  .cust-table { font-size: .92rem; }
+}

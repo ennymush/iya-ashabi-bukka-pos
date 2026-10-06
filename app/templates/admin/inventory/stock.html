@@ -1,0 +1,89 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, status_badge, empty_state %}
+{% block title %}Stock - {{ business.name }}{% endblock %}
+{% block topbar_title %}Stock{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Stock', 'Adjust stock here. Every change is recorded with a reason.') %}
+  <a class="btn btn-ghost" href="{{ url_for('inventory.adjustments') }}">ADJUSTMENT HISTORY</a>
+  <a class="btn btn-ghost" href="{{ url_for('inventory.low_stock') }}">LOW STOCK</a>
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='inventory') }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+<div class="stat-grid">
+  {{ stat_card('Products', summary.total, 'gold') }}
+  {{ stat_card('Low stock', summary.low, 'orange') }}
+  {{ stat_card('Out of stock', summary.out, 'red') }}
+  {% if show_cost %}{{ stat_card('Stock value (at cost)', (summary.stock_value|int / 100)|money_minor, 'brown') }}{% endif %}
+</div>
+
+<form method="get" class="filter-bar">
+  <div class="filter-presets">
+    {% for key, label in [('all','All'),('active','Active'),('low','Low Stock'),('out','Out of Stock')] %}
+      <a class="chip {{ 'active' if view == key }}" href="{{ url_for('inventory.stock_list') }}?view={{ key }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ query }}" placeholder="Search name, SKU or barcode">
+    <select name="category_id">
+      <option value="">All categories</option>
+      {% for category in categories %}
+        <option value="{{ category.id }}" {{ 'selected' if selected_category == category.id }}>{{ category.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">SEARCH</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if products %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Product</th><th>Category</th><th class="num">Stock</th>
+            <th class="num">Minimum</th><th>Status</th>
+            {% if g.user.has_any_permission('inventory.manage') %}<th>Adjust stock</th>{% endif %}</tr>
+      </thead>
+      <tbody>
+        {% for product in products %}
+        <tr>
+          <td><strong>{{ product.name }}</strong></td>
+          <td>{{ product.category.name if product.category else '-' }}</td>
+          <td class="num">{{ product.stock_quantity }}</td>
+          <td class="num">{{ product.minimum_stock }}</td>
+          <td>{{ status_badge(product.stock_status) }}</td>
+          {% if g.user.has_any_permission('inventory.manage') %}
+          <td>
+            <form method="post" action="{{ url_for('inventory.adjust_stock', product_id=product.id) }}" class="filter-extra">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="action">
+                <option value="add">Add stock</option>
+                <option value="remove">Remove stock</option>
+                <option value="set">Set exact count</option>
+              </select>
+              <input type="number" name="quantity" value="0" min="0" style="width:5rem;" required>
+              <select name="reason">
+                <option>New Delivery</option>
+                <option>Opening Stock</option>
+                <option>Damaged</option>
+                <option>Spoilage</option>
+                <option>Correction</option>
+                <option>Return</option>
+                <option>Other</option>
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm">SAVE</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No products match these filters.') }}
+  {% endif %}
+</div>
+{% endblock %}

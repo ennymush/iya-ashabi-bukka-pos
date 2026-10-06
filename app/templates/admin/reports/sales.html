@@ -1,0 +1,89 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state, status_badge %}
+{% block title %}Sales Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Sales Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Sales Report', 'Every completed transaction in the selected period.') %}
+  {% if g.user.has_any_permission('reports.print') %}
+    <a class="btn btn-ghost" href="{{ url_for('reports.print_view', type='sales', range=preset) }}">PRINT</a>
+  {% endif %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='sales') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.sales_report'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Total sales', summary.total|money, 'brown') }}
+  {{ stat_card('Transactions', summary.transactions, 'gold') }}
+  {{ stat_card('Cash', summary.cash|money, 'green') }}
+  {{ stat_card('Transfer', summary.transfer|money, 'green') }}
+  {{ stat_card('Card', summary.card|money, 'green') }}
+  {{ stat_card('Discounts', summary.discount|money, 'orange') }}
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="hidden" name="range" value="{{ preset }}">
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Receipt, cashier or product">
+    <select name="cashier_id">
+      <option value="">All cashiers</option>
+      {% for cashier in cashiers %}
+        <option value="{{ cashier.id }}" {{ 'selected' if request.args.get('cashier_id')|int == cashier.id }}>{{ cashier.full_name }}</option>
+      {% endfor %}
+    </select>
+    <select name="payment">
+      <option value="">All payments</option>
+      {% for method in payment_methods %}
+        <option value="{{ method }}" {{ 'selected' if request.args.get('payment') == method }}>{{ method }}</option>
+      {% endfor %}
+    </select>
+    <select name="status">
+      <option value="">All statuses</option>
+      {% for value in statuses %}
+        <option value="{{ value }}" {{ 'selected' if request.args.get('status') == value }}>{{ value }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">FILTER</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if sales %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Receipt</th><th>Date</th><th>Time</th><th>Cashier</th>
+          <th class="num">Items</th><th class="num">Subtotal</th><th class="num">Discount</th>
+          <th class="num">Total</th><th>Payment</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in sales %}
+        <tr>
+          <td>{{ sale.receipt_number }}</td>
+          <td>{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ sale.sale_time }}</td>
+          <td>{{ sale.cashier_name }}</td>
+          <td class="num">{{ sale.item_count }}</td>
+          <td class="num">{{ sale.subtotal|money }}</td>
+          <td class="num">{{ sale.discount_amount|money }}</td>
+          <td class="num"><strong>{{ sale.total_amount|money }}</strong></td>
+          <td>{{ sale.payment_method }}</td>
+          <td>{{ status_badge(sale.status) }}</td>
+          <td class="num">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('sales.transaction_detail', sale_id=sale.id) }}">VIEW</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No transactions match these filters.') }}
+  {% endif %}
+</div>
+{% endblock %}

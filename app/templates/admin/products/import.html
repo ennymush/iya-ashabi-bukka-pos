@@ -1,0 +1,200 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card %}
+{% block title %}Import Price List - {{ business.name }}{% endblock %}
+{% block topbar_title %}Import Price List{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Import Price List', 'Upload a price list from Excel, CSV, Word or PDF. Nothing is saved until you confirm it.') %}
+  <a class="btn btn-ghost" href="{{ url_for('products.list_products') }}">BACK TO PRODUCTS</a>
+{% endcall %}
+
+{% if not rows %}
+  {# ---------- Stage 1: choose a file ---------- #}
+  <div class="card">
+    <div class="card-head">
+      <h2>Choose your file</h2>
+    </div>
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('products.import_products') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="stage" value="preview">
+      <div class="field">
+        <label for="price_file">Price list file</label>
+        <input type="file" id="price_file" name="price_file" accept=".xlsx,.xlsm,.csv,.docx,.pdf" required>
+        <span class="help">Accepted formats: {{ supported }}.</span>
+      </div>
+      <div class="form-actions">
+        <span></span>
+        <a class="btn btn-ghost" href="{{ url_for('products.list_products') }}">CANCEL</a>
+        <button type="submit" class="btn btn-primary">UPLOAD &amp; PREVIEW</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>How to lay out your file</h2>
+    </div>
+    <div class="card-body">
+        <p>The easiest file is a spreadsheet with these column headings on the first row:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Product Name</th><th>Category</th><th>Selling Price</th><th>Stock</th></tr></thead>
+          <tbody>
+            <tr><td>Jollof Rice</td><td>Main Meals</td><td>2,500</td><td>20</td></tr>
+            <tr><td>Zobo</td><td>Drinks</td><td>1,000</td><td>50</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Only <strong>Product Name</strong> and <strong>Selling Price</strong> are needed. The other columns are optional, and you can rename the headings (Item, Amount, Price, Unit Price and so on all work).</p>
+      <ul class="help">
+        <li>For a Word or PDF file, a simple list works too - one product per line, like <em>Jollof Rice - 2500</em>.</li>
+        <li>Prices may be written as <em>2500</em>, <em>2,500.00</em> or <em>&#8358;2,500</em>.</li>
+        <li><strong>Existing products are matched by SKU or barcode</strong>, and then by name, so re-uploading an updated list changes prices instead of creating duplicates.</li>
+        <li>If a row has no Category, the product is filed automatically from its name (Jollof Rice goes to Main Meals, Zobo to Drinks, and so on), falling back to 'Other'.</li>
+        <li>A category in your file that the shop does not have yet is created for you.</li>
+      </ul>
+      {% if pdf_missing %}
+        <p class="help">PDF support needs one extra library. Excel, CSV and Word work without it.</p>
+      {% endif %}
+    </div>
+  </div>
+
+{% else %}
+{% set summary = plan.summary %}
+  <div class="stat-grid">
+    {{ stat_card('New products', summary.new, 'green') }}
+    {{ stat_card('Price increases', summary.price, 'brown') }}
+    {{ stat_card('Price decreases', summary.detail, 'gold') }}
+    {{ stat_card('Unchanged', summary.same, 'green') }}
+    {{ stat_card('Problems', summary.problem, 'red' if summary.problem else 'green') }}
+  </div>
+
+  {% if summary.new_categories %}
+    <div class="card">
+      <div class="card-head"><h2>Categories to be created</h2></div>
+      <div class="card-body">
+        <p>These categories are not on the system yet and will be added automatically:</p>
+        <p>{% for name in summary.new_categories %}<span class="badge badge-info">{{ name }}</span> {% endfor %}</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('products.import_products') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="stage" value="apply">
+    <input type="hidden" name="plan" id="plan-json">
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Review from {{ filename or 'your file' }}</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th></th><th>Product</th><th>Category</th>
+              <th>Current price</th><th>New price</th><th>What will happen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              {% set action = row.action %}
+              {% set label, tone = {
+                  'new': ('NEW PRODUCT', 'success'),
+                  'price': ('PRICE INCREASE', 'info'),
+                  'detail': ('PRICE DECREASE', 'warning'),
+                  'same': ('NO CHANGE', 'muted'),
+                  'problem': ('PROBLEM', 'danger')
+                }.get(action, (action, 'muted')) %}
+              <tr class="{{ 'row-problem' if action == 'problem' else '' }}">
+                <td>
+                  {% if action in ('new', 'price', 'detail') %}
+                    <input type="checkbox" class="row-check" data-index="{{ loop.index0 }}"
+                           {% if action == 'detail' %}data-drop="1"{% endif %} checked>
+                  {% endif %}
+                </td>
+                <td><strong>{{ row.name or '(no name)' }}</strong></td>
+                <td>
+                  {% if row.category_name %}
+                    {% if row.category_new %}
+                      <span class="badge badge-info">{{ row.category_name }} (new)</span>
+                    {% else %}{{ row.category_name }}{% endif %}
+                  {% else %}&mdash;{% endif %}
+                </td>
+                <td class="num">
+                  {% if row.old_price is not none %}{{ row.old_price|money }}{% else %}&mdash;{% endif %}
+                </td>
+                <td class="num">
+                  {% if row.new_price is not none %}{{ row.new_price|money }}{% else %}&mdash;{% endif %}
+                </td>
+                <td>
+                  <span class="badge badge-{{ tone }}">{{ label }}</span>
+                  {% if row.detail %}<div class="help">{{ row.detail }}</div>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if summary.detail %}
+      <div class="card">
+        <div class="card-body">
+          <label class="inline-label">
+            <input type="checkbox" name="include_drops" value="1" id="include_drops">
+            Also apply the {{ summary.detail }} price decrease{{ '' if summary.detail == 1 else 's' }} above
+          </label>
+          <span class="help">
+            Price drops are unticked by default. Customers who already paid the old
+            price may ask about it, so tick this only once you are happy.
+          </span>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="{{ url_for('products.import_products') }}">START OVER</a>
+      <button type="submit" class="btn btn-primary" id="apply-btn">IMPORT ROWS</button>
+    </div>
+  </form>
+
+  <script>
+    (function () {
+      var field = document.getElementById('plan-json');
+      var button = document.getElementById('apply-btn');
+      if (!field || !button) { return; }
+
+      var rows = {{ plan.rows|tojson }};
+      var checks = document.querySelectorAll('.row-check');
+      var drops = document.getElementById('include_drops');
+
+      function refresh() {
+        var selected = 0;
+        checks.forEach(function (box) {
+          var index = parseInt(box.getAttribute('data-index'), 10);
+          var row = rows[index];
+          if (!row) { return; }
+          row.include = '0';
+          if (!box.checked) { return; }
+          // A price decrease is only applied when the owner ticks it.
+          if (box.getAttribute('data-drop') === '1' && drops && !drops.checked) {
+            return;
+          }
+          row.include = '1';
+          selected += 1;
+        });
+        field.value = JSON.stringify(rows.filter(function (row) {
+          return row.include === '1';
+        }));
+        button.textContent = 'IMPORT ' + selected + ' ROW' + (selected === 1 ? '' : 'S');
+        button.disabled = selected === 0;
+      }
+
+      checks.forEach(function (box) { box.addEventListener('change', refresh); });
+      if (drops) { drops.addEventListener('change', refresh); }
+      refresh();
+    })();
+  </script>
+{% endif %}
+{% endblock %}

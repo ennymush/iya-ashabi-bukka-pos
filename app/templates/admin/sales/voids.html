@@ -1,0 +1,45 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, date_range_filter, empty_state, pagination %}
+{% block title %}Voids - {{ business.name }}{% endblock %}
+{% block topbar_title %}Voids{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Voided Transactions', 'Voided sales remain in the database and are still reported.') %}
+  <a class="btn btn-ghost" href="{{ url_for('sales.transactions', status='VOIDED') }}">TRANSACTIONS</a>
+{% endcall %}
+
+{{ date_range_filter(url_for('sales.voids_list'), start, end, preset) }}
+
+<div class="card">
+  {% if sales.items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Receipt</th><th>Date</th><th>Time</th><th>Cashier</th>
+            <th class="num">Total</th><th>Voided by</th><th>Voided at</th><th>Reason</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for sale in sales.items %}
+        <tr>
+          <td>{{ sale.receipt_number }}</td>
+          <td>{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ sale.sale_time }}</td>
+          <td>{{ sale.cashier_name }}</td>
+          <td class="num">{{ sale.total_amount|money }}</td>
+          <td>{{ sale.voided_by.full_name if sale.voided_by else '-' }}</td>
+          <td>{{ sale.voided_at.strftime('%d/%m/%Y %H:%M') if sale.voided_at else '-' }}</td>
+          <td>{{ sale.void_reason or '-' }}</td>
+          <td class="num">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('sales.transaction_detail', sale_id=sale.id) }}">VIEW</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(sales, url_for('sales.voids_list')) }}
+  {% else %}
+    {{ empty_state('No voided transactions in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

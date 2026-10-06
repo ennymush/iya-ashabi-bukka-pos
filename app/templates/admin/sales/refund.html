@@ -1,0 +1,118 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header %}
+{% block title %}Refund {{ sale.receipt_number }} - {{ business.name }}{% endblock %}
+{% block topbar_title %}Refund a Sale{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Refund ' ~ sale.receipt_number,
+                    'The original sale is kept. Choose which items to return.') %}
+  <a class="btn btn-ghost" href="{{ url_for('sales.transaction_detail', sale_id=sale.id) }}">CANCEL</a>
+{% endcall %}
+
+<div class="card">
+  <div class="card-head"><h2>Items in this sale</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th></th><th>Product</th><th class="num">Sold</th>
+            <th class="num">Already returned</th><th class="num">Refund quantity</th>
+            <th class="num">Unit price</th><th class="num">Refund amount</th></tr>
+      </thead>
+      <tbody>
+        {% for item in sale.items %}
+        {% set remaining = item.quantity - item.returned_quantity %}
+        <tr data-item-id="{{ item.id }}" data-unit-price="{{ item.unit_price }}"
+            data-remaining="{{ remaining }}">
+          <td>
+            <input type="checkbox" class="refund-check" {{ 'disabled' if remaining <= 0 }}>
+          </td>
+          <td>{{ item.product_name }}</td>
+          <td class="num">{{ item.quantity }}</td>
+          <td class="num">{{ item.returned_quantity }}</td>
+          <td class="num">
+            <input type="number" class="refund-qty" value="{{ remaining }}"
+                   min="0" max="{{ remaining }}" style="width:5rem;" {{ 'disabled' if remaining <= 0 }}>
+          </td>
+          <td class="num">{{ item.unit_price|money }}</td>
+          <td class="num refund-amount">{{ (item.unit_price|int * remaining)|money_minor }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="items_json" id="items-json" value="[]">
+
+  <div class="form-grid">
+    <div class="field">
+      <label for="reason">Reason for refund (required)</label>
+      <input type="text" id="reason" name="reason" required
+             placeholder="Example: Customer changed their mind">
+      <span class="help">Recorded against the original receipt for auditing.</span>
+    </div>
+    <div class="field">
+      <label for="refund_method">Refund method</label>
+      <select id="refund_method" name="refund_method">
+        {% for method in payment_methods %}
+          <option value="{{ method }}" {{ 'selected' if method == sale.payment_method }}>{{ method }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="check">
+      <input type="checkbox" id="restock" name="restock" value="1" checked>
+      <label for="restock">Put returned items back into stock</label>
+    </div>
+  </div>
+
+  <div class="hint-box">
+    <strong>Refund total: <span id="refund-total">{{ sale.total_amount|money }}</span></strong>
+  </div>
+
+  <div class="form-actions">
+    <span></span>
+    <button type="submit" class="btn btn-primary">PROCESS REFUND</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+const token = '{{ csrf_token() }}';
+const rows = Array.from(document.querySelectorAll('tr[data-item-id]'));
+
+function recalc() {
+  const lines = [];
+  let total = 0;
+  rows.forEach((row) => {
+    const check = row.querySelector('.refund-check');
+    const qtyInput = row.querySelector('.refund-qty');
+    const remaining = parseInt(row.dataset.remaining, 10) || 0;
+    const unitPrice = parseInt(row.dataset.unitPrice, 10) || 0;
+    let qty = check.checked ? parseInt(qtyInput.value, 10) || 0 : 0;
+    if (qty < 0) qty = 0;
+    if (qty > remaining) { qty = remaining; qtyInput.value = qty; }
+    const amount = qty * unitPrice;
+    total += amount;
+    row.querySelector('.refund-amount').textContent = (amount / 100).toLocaleString('en-NG', {
+      style: 'currency', currency: 'NGN', minimumFractionDigits: 2,
+    }).replace('NGN', '\u20a6');
+    if (qty > 0) {
+      lines.push({ sale_item_id: parseInt(row.dataset.itemId, 10), quantity: qty });
+    }
+  });
+  document.getElementById('items-json').value = JSON.stringify(lines);
+  document.getElementById('refund-total').textContent = (total / 100).toLocaleString('en-NG', {
+    style: 'currency', currency: 'NGN', minimumFractionDigits: 2,
+  }).replace('NGN', '\u20a6');
+}
+
+rows.forEach((row) => {
+  row.querySelector('.refund-check').addEventListener('change', recalc);
+  row.querySelector('.refund-qty').addEventListener('input', recalc);
+});
+recalc();
+</script>
+{% endblock %}

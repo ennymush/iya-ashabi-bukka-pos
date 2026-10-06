@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Sign In - {{ business.name }}{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block chrome %}{% endblock %}
+
+{% block content %}
+<div class="login-card">
+  <div class="login-brand">
+    {% if business.logo_path %}
+      <img class="login-logo" src="{{ url_for('static', filename='images/' ~ business.logo_path) if business.logo_path.startswith('images/') else '/uploads/branding/' ~ business.logo_path }}" alt="{{ business.name }} logo">
+    {% else %}
+      <div class="brand-mark" aria-hidden="true">IAB</div>
+    {% endif %}
+    <h1>{{ business.name }}</h1>
+    <div class="tagline">{{ business.tagline }}</div>
+  </div>
+
+  <form method="post" action="{{ url_for('auth.login') }}" autocomplete="off" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if request.args.get('next') or request.form.get('next') %}
+      <input type="hidden" name="next" value="{{ request.args.get('next') or request.form.get('next') }}">
+    {% endif %}
+
+    <div class="field">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" value="{{ username or '' }}"
+             autocomplete="username" autocapitalize="none" spellcheck="false"
+             required autofocus placeholder="Enter your username">
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password"
+             autocomplete="current-password" required placeholder="Enter your password">
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg btn-block">LOGIN</button>
+  </form>
+
+  <div class="login-links">
+    <a href="{{ url_for('auth.forgot_password') }}">Forgotten your password?</a>
+  </div>
+
+  <div class="login-footer">
+    <p style="margin:0 0 .3rem;">{{ business.address_line1 }} {{ business.address_line2 }}</p>
+    <p style="margin:0 0 .3rem;">{{ business.address_city }}</p>
+    <p style="margin:0;">{{ business.phone }} &nbsp;|&nbsp; {{ business.phone_2 }}</p>
+  </div>
+</div>
+{% endblock %}

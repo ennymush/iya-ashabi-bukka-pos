@@ -1,0 +1,74 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, text_field, checkbox_field %}
+{% block title %}Receipt Settings - {{ business.name }}{% endblock %}
+{% block topbar_title %}Receipt Settings{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Receipt Settings', 'Choose what appears on the printed receipt.') %}
+  <a class="btn btn-ghost" href="{{ url_for('admin.settings_hardware') }}">HARDWARE</a>
+{% endcall %}
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><h2>Layout</h2></div>
+
+  <div class="form-grid">
+    <div class="field">
+      <label for="paper_width">Paper width</label>
+      <select id="paper_width" name="paper_width">
+        <option value="58" {{ 'selected' if receipt.get('receipt.paper_width') == '58' }}>58 mm (short)</option>
+        <option value="80" {{ 'selected' if receipt.get('receipt.paper_width') != '58' }}>80 mm (standard)</option>
+      </select>
+    </div>
+    {{ text_field('footer_message', 'Footer message', receipt.get('receipt.footer_message', ''), 'Example: Thank you for your patronage.') }}
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>What to print</h2></div>
+  <div class="form-grid">
+    {{ checkbox_field('show_logo', 'Print the business logo', receipt.get('receipt.show_logo') == '1') }}
+    {{ checkbox_field('show_tagline', 'Print the tagline', receipt.get('receipt.show_tagline') == '1') }}
+    {{ checkbox_field('show_address', 'Print the address', receipt.get('receipt.show_address') == '1') }}
+    {{ checkbox_field('show_email', 'Print the email address', receipt.get('receipt.show_email') == '1') }}
+    {{ checkbox_field('show_item_names', 'Print item names', receipt.get('receipt.show_item_names') == '1') }}
+    {{ checkbox_field('cut_paper', 'Cut the paper automatically', receipt.get('receipt.cut_paper') == '1') }}
+    {{ checkbox_field('open_drawer', 'Open the cash drawer on cash sales', receipt.get('receipt.open_drawer') == '1') }}
+  </div>
+
+  <div class="form-actions">
+    <span></span>
+    <button type="submit" class="btn btn-primary">SAVE RECEIPT SETTINGS</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-head"><h2>Preview</h2></div>
+  <div style="background:#fff;border:1px solid var(--line);border-radius:6px;padding:1rem;max-width:340px;margin:0 auto;font-family:monospace;font-size:.85rem;white-space:pre-wrap;">{{ business.name }}
+{{ business.tagline }}
+
+{{ business.address_line1 }}
+{{ business.address_line2 }}
+{{ business.address_city }}
+{{ business.phone }}  {{ business.phone_2 }}
+{{ business.email }}
+{{ '-' * 32 }}
+Receipt:   IAB-{{ now().strftime('%Y%m%d') }}-000001
+Date:      {{ now().strftime('%d/%m/%Y') }}
+Time:      {{ now().strftime('%H:%M') }}
+Cashier:   John Doe
+{{ '-' * 32 }}
+Jollof Rice
+  2 x {{ '5,000.00' }}     {{ '5,000.00' }}
+Chicken
+  1 x {{ '2,000.00' }}     {{ '2,000.00' }}
+{{ '-' * 32 }}
+Subtotal:      {{ '7,000.00' }}
+Discount:      {{ '0.00' }}
+TOTAL:         {{ '7,000.00' }}
+Payment:       Cash
+Amount Paid:   {{ '10,000.00' }}
+Change:        {{ '3,000.00' }}
+{{ '-' * 32 }}
+{{ receipt.get('receipt.footer_message', 'Thank you for your patronage.') }}</div>
+  <p class="help" style="text-align:center;">Preview shows the layout. Amounts are examples.</p>
+</div>
+{% endblock %}

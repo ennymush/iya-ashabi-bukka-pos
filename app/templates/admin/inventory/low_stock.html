@@ -1,0 +1,48 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, status_badge, empty_state %}
+{% block title %}Low Stock - {{ business.name }}{% endblock %}
+{% block topbar_title %}Low Stock{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Low and Out of Stock', 'Restock these before the kitchen runs out.') %}
+  <a class="btn btn-primary" href="{{ url_for('inventory.stock_list', view='low') }}">RESTOCK NOW</a>
+{% endcall %}
+
+<div class="card">
+  {% if products %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Product</th><th>Category</th><th class="num">Stock</th>
+            <th class="num">Minimum</th><th>Status</th>
+            {% if g.user.has_any_permission('inventory.manage') %}<th>Quick add</th>{% endif %}</tr>
+      </thead>
+      <tbody>
+        {% for product in products %}
+        <tr>
+          <td><strong>{{ product.name }}</strong></td>
+          <td>{{ product.category.name if product.category else '-' }}</td>
+          <td class="num">{{ product.stock_quantity }}</td>
+          <td class="num">{{ product.minimum_stock }}</td>
+          <td>{{ status_badge(product.stock_status) }}</td>
+          {% if g.user.has_any_permission('inventory.manage') %}
+          <td>
+            <form method="post" action="{{ url_for('inventory.adjust_stock', product_id=product.id) }}" class="filter-extra">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="add">
+              <input type="hidden" name="reason" value="New Delivery">
+              <input type="number" name="quantity" min="1" value="10" style="width:5rem;" required>
+              <button type="submit" class="btn btn-primary btn-sm">ADD STOCK</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('Everything is well stocked.', 'No products are at or below their minimum level.') }}
+  {% endif %}
+</div>
+{% endblock %}

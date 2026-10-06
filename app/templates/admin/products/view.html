@@ -1,0 +1,119 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, status_badge, stock_badge, empty_state %}
+{% block title %}{{ product.name }} - {{ business.name }}{% endblock %}
+{% block topbar_title %}Product Details{% endblock %}
+
+{% block admin_content %}
+{% call page_header(product.name, 'Product details, stock movements and price history.') %}
+  {% if g.user.has_any_permission('products.manage') %}
+    <a class="btn btn-ghost" href="{{ url_for('products.edit_product', product_id=product.id) }}">EDIT</a>
+  {% endif %}
+  <a class="btn btn-primary" href="{{ url_for('products.list_products') }}">BACK TO PRODUCTS</a>
+{% endcall %}
+
+<div class="stat-grid">
+  <div class="stat-card stat-brown">
+    <span class="stat-label">Selling price</span>
+    <span class="stat-value">{{ product.selling_price|money }}</span>
+  </div>
+  {% if show_cost %}
+  <div class="stat-card stat-gold">
+    <span class="stat-label">Cost price</span>
+    <span class="stat-value">{{ product.cost_price|money }}</span>
+    <span class="stat-hint">Margin {{ '%.1f'|format(product.margin_percent|float) }}%</span>
+  </div>
+  {% endif %}
+  <div class="stat-card stat-{{ 'red' if product.stock_quantity <= 0 else ('orange' if product.is_low else 'green') }}">
+    <span class="stat-label">Stock</span>
+    <span class="stat-value">{{ product.stock_quantity }}</span>
+    <span class="stat-hint">{{ product.stock_status }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Details</h2>{{ status_badge('ACTIVE' if product.is_active else 'INACTIVE') }}</div>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td>Category</td><td>{{ product.category.name if product.category else '-' }}</td></tr>
+        <tr><td>SKU</td><td>{{ product.sku or '-' }}</td></tr>
+        <tr><td>Barcode</td><td>{{ product.barcode or '-' }}</td></tr>
+        <tr><td>Unit</td><td>{{ product.unit }}</td></tr>
+        <tr><td>Minimum stock</td><td>{{ product.minimum_stock }}</td></tr>
+        {% if product.description %}<tr><td>Description</td><td>{{ product.description }}</td></tr>{% endif %}
+        {% if product.preparation_notes %}<tr><td>Preparation notes</td><td>{{ product.preparation_notes }}</td></tr>{% endif %}
+        <tr><td>Created</td><td>{{ product.created_at.strftime('%d/%m/%Y %H:%M') if product.created_at else '-' }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  {% if g.user.has_any_permission('products.price') %}
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>CHANGE PRICE</h2></div>
+  <form method="post" action="{{ url_for('products.change_price', product_id=product.id) }}" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="new_price">New selling price (Naira)</label>
+      <input type="text" inputmode="decimal" id="new_price" name="selling_price"
+             value="{{ product.selling_price }}" required>
+    </div>
+    <div class="field">
+      <label for="reason">Reason for the change</label>
+      <input type="text" id="reason" name="reason" placeholder="Example: Supplier price increase">
+      <span class="help">Recorded in price history. Past sales keep their original price.</span>
+    </div>
+    <div class="form-actions">
+      <span></span><span></span>
+      <button type="submit" class="btn btn-primary">CHANGE PRICE</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Recent stock movements</h2></div>
+  {% if movements %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Reason</th><th class="num">Change</th><th class="num">New stock</th><th>By</th></tr></thead>
+      <tbody>
+        {% for movement in movements %}
+        <tr>
+          <td>{{ movement.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ movement.reason }}</td>
+          <td class="num">{{ '%+d'|format(movement.difference) }}</td>
+          <td class="num">{{ movement.new_quantity }}</td>
+          <td>{{ movement.user.full_name if movement.user else '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No stock movements yet.') }}
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Price history</h2></div>
+  {% if history %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th class="num">Old price</th><th class="num">New price</th><th>Changed by</th><th>Reason</th></tr></thead>
+      <tbody>
+        {% for entry in history %}
+        <tr>
+          <td>{{ entry.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td class="num">{{ entry.old_price|money }}</td>
+          <td class="num">{{ entry.new_price|money }}</td>
+          <td>{{ entry.changed_by.full_name if entry.changed_by else '-' }}</td>
+          <td>{{ entry.reason or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('This price has never been changed.') }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ business.name }} - Customer Display</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/customer.css') }}">
+  {% if fullscreen %}<meta name="iab-fullscreen" content="1">{% endif %}
+</head>
+<body class="customer-body">
+  <div class="cust-screen">
+    <header class="cust-header">
+      <div class="cust-brand">
+        {% if business.logo_path %}
+          <img src="/uploads/branding/{{ business.logo_path }}" alt="">
+        {% endif %}
+        <div>
+          <h1>{{ business.name }}</h1>
+          <div class="tag">{{ business.tagline }}</div>
+        </div>
+      </div>
+      {% if options.show_date_time %}
+        <div class="cust-datetime">
+          <div id="cust-date">&mdash;</div>
+          <div id="cust-time">&mdash;</div>
+        </div>
+      {% endif %}
+    </header>
+
+    <div class="cust-body" id="cust-body">
+      <div class="cust-hero" id="view-welcome">
+        <div class="big">{{ options.welcome_message }}</div>
+        {% if business.promo_image %}
+          <img class="promo" src="/uploads/branding/{{ business.promo_image }}" alt="">
+        {% endif %}
+        {% if options.promotional_message %}
+          <div class="small">{{ options.promotional_message }}</div>
+        {% endif %}
+        <div class="mid">{{ business.tagline }}</div>
+      </div>
+
+      <div id="view-cart" hidden>
+        <table class="cust-table">
+          <thead>
+            <tr><th>Item</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Total</th></tr>
+          </thead>
+          <tbody id="cart-rows"></tbody>
+        </table>
+        <div class="cust-totals">
+          <div class="cust-tot-row"><span>Subtotal</span><span class="val" id="c-subtotal">&#8358;0.00</span></div>
+          <div class="cust-tot-row discount" id="c-discount-row" hidden><span>Discount</span><span class="val" id="c-discount">&#8358;0.00</span></div>
+          <div class="cust-tot-row grand"><span class="lbl">TOTAL</span><span class="val" id="c-total">&#8358;0.00</span></div>
+        </div>
+      </div>
+
+      <div class="cust-hero cust-payment" id="view-payment" hidden>
+        <div class="total-label">Amount Due</div>
+        <div class="total" id="p-total">&#8358;0.00</div>
+        <div class="row" id="p-paid-row" hidden>
+          <div class="paid-label">Amount Paid</div>
+          <div class="paid" id="p-paid">&#8358;0.00</div>
+        </div>
+        <div id="p-change-row" hidden>
+          <div class="change-label">Change</div>
+          <div class="change" id="p-change">&#8358;0.00</div>
+        </div>
+      </div>
+
+      <div class="cust-hero" id="view-complete" hidden>
+        <div class="cust-checkmark">&#10004;</div>
+        <div class="big">PAYMENT COMPLETE</div>
+        <div class="mid" id="complete-thanks">Thank you for your patronage!</div>
+        <div class="small" id="complete-ref"></div>
+      </div>
+
+      <div class="cust-hero" id="view-test" hidden>
+        <div class="cust-spinner">&#9889;</div>
+        <div class="big">HARDWARE TEST</div>
+        <div class="small">Customer display is connected and working.</div>
+      </div>
+    </div>
+
+    <footer class="cust-footer">
+      <span>{{ business.address_line1 }} {{ business.address_line2 }} {{ business.address_city }}</span>
+      <span>{{ business.phone }}</span>
+    </footer>
+  </div>
+
+  <script>
+    window.IAB_DISPLAY = {
+      stateUrl: "{{ url_for('customer.state') }}",
+      streamUrl: "{{ url_for('customer.display_stream') }}",
+      showTotals: {{ 'true' if options.show_totals else 'false' }},
+      thankYou: {{ options.thankyou_message|tojson }}
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/customer-display.js') }}"></script>
+</body>
+</html>

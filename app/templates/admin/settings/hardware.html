@@ -1,0 +1,206 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header %}
+{% block title %}Hardware - {{ business.name }}{% endblock %}
+{% block topbar_title %}Hardware Settings{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Hardware', 'Configure your printer, customer display, cash drawer and barcode scanner.') %}
+  <span class="badge {{ 'badge-info' if mock else 'badge-success' }}">
+    {{ 'MOCK HARDWARE (TEST MODE)' if mock else 'REAL HARDWARE' }}
+  </span>
+{% endcall %}
+
+{% if mock %}
+<div class="hint-box">
+  <strong>Test mode is on.</strong> Print jobs, drawer pulses, the customer display and the
+  scanner are simulated, so you can test the whole system without hardware attached.
+  Choose your real devices below and turn mock mode off when you are ready.
+</div>
+{% endif %}
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><h2>Receipt printer</h2></div>
+  <div class="form-grid">
+    <div class="field">
+      <label for="printer_name">Printer</label>
+      <select id="printer_name" name="printer_name">
+        <option value="">Not configured</option>
+        {% for name in printers %}
+          <option value="{{ name }}" {{ 'selected' if hardware.get('hardware.printer_name') == name }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="printer_mode">Printer mode</label>
+      <select id="printer_mode" name="printer_mode">
+        <option value="mock" {{ 'selected' if hardware.get('hardware.printer_mode') == 'mock' }}>Test / mock printer</option>
+        <option value="windows" {{ 'selected' if hardware.get('hardware.printer_mode') == 'windows' }}>Windows printer</option>
+        <option value="escpos" {{ 'selected' if hardware.get('hardware.printer_mode') == 'escpos' }}>ESC/POS thermal printer</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="paper_width_mm">Paper width</label>
+      <select id="paper_width_mm" name="paper_width_mm">
+        {% for value, label in paper_choices %}
+          <option value="{{ value }}"
+            {{ 'selected' if hardware.get('hardware.paper_width_mm') == value }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>Cash drawer</h2></div>
+  <div class="form-grid">
+    <div class="field">
+      <label for="drawer_mode">Drawer mode</label>
+      <select id="drawer_mode" name="drawer_mode">
+        <option value="mock" {{ 'selected' if hardware.get('hardware.drawer_mode') == 'mock' }}>Test / mock drawer</option>
+        <option value="printer" {{ 'selected' if hardware.get('hardware.drawer_mode') == 'printer' }}>Connected through the receipt printer</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="drawer_pin">Drawer pin</label>
+      <input type="number" id="drawer_pin" name="drawer_pin" min="2" max="8"
+             value="{{ hardware.get('hardware.drawer_pin', '2') }}">
+      <span class="help">Most printers use pin 2.</span>
+    </div>
+    <div class="field">
+      <label for="drawer_pulse_ms">Pulse length (milliseconds)</label>
+      <input type="number" id="drawer_pulse_ms" name="drawer_pulse_ms" min="50" max="500"
+             value="{{ hardware.get('hardware.drawer_pulse_ms', '120') }}">
+    </div>
+  </div>
+<div class="card-head" style="border-top:1px solid var(--line);"><h2>Customer display</h2></div>
+  <div class="form-grid">
+    <div class="field">
+      <label for="display_mode">Display mode</label>
+      <select id="display_mode" name="display_mode">
+        <option value="browser" {{ 'selected' if hardware.get('hardware.display_mode') == 'browser' }}>Open a window in the browser</option>
+        <option value="browser_window" {{ 'selected' if hardware.get('hardware.display_mode') == 'browser_window' }}>Separate browser window</option>
+      </select>
+    </div>
+    <div class="check">
+      <input type="checkbox" id="display_second_monitor" name="display_second_monitor" value="1"
+             {{ 'checked' if hardware.get('hardware.display_second_monitor') == '1' }}>
+      <label for="display_second_monitor">Use the second monitor for the customer display</label>
+    </div>
+    <div class="field">
+      <label for="display_position">Which monitor</label>
+      <select id="display_position" name="display_position">
+        {% for monitor in monitors %}
+          <option value="{{ loop.index }}"
+            {{ 'selected' if hardware.get('hardware.display_position') == loop.index|string }}>
+            {{ monitor.label }} ({{ monitor.width }}x{{ monitor.height }})
+          </option>
+        {% endfor %}
+        {% if not monitors %}
+          <option value="2" {{ 'selected' if hardware.get('hardware.display_position') == '2' }}>Second monitor</option>
+        {% endif %}
+      </select>
+    </div>
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>Barcode scanner</h2></div>
+  <div class="form-grid">
+    <div class="field">
+      <label for="scanner_mode">Scanner type</label>
+      <select id="scanner_mode" name="scanner_mode">
+        <option value="keyboard" {{ 'selected' if hardware.get('hardware.scanner_mode') == 'keyboard' }}>USB scanner (behaves like a keyboard)</option>
+        <option value="mock" {{ 'selected' if hardware.get('hardware.scanner_mode') == 'mock' }}>Test scanner</option>
+      </select>
+      <span class="help">Most USB barcode scanners work with no configuration at all.</span>
+    </div>
+    <div class="field">
+      <label for="scanner_prefix">Scanner prefix (optional)</label>
+      <input type="text" id="scanner_prefix" name="scanner_prefix" value="{{ hardware.get('hardware.scanner_prefix', '') }}">
+    </div>
+    <div class="field">
+      <label for="scanner_suffix">Scanner suffix (optional)</label>
+      <input type="text" id="scanner_suffix" name="scanner_suffix" value="{{ hardware.get('hardware.scanner_suffix', '') }}">
+    </div>
+    <div class="check">
+      <input type="checkbox" id="scanner_beep" name="scanner_beep" value="1"
+             {{ 'checked' if hardware.get('hardware.scanner_beep') == '1' }}>
+      <label for="scanner_beep">Beep on a successful scan</label>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <span></span>
+    <button type="submit" class="btn btn-primary">SAVE HARDWARE SETTINGS</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-head"><h2>Test your hardware</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Device</th><th>Test</th><th>Result</th></tr></thead>
+      <tbody>
+        {% for key, label in [('printer', 'Receipt printer'), ('cash_drawer', 'Cash drawer'),
+                               ('customer_display', 'Customer display'), ('scanner', 'Barcode scanner')] %}
+        <tr>
+          <td><strong>{{ label }}</strong></td>
+          <td>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="testDevice('{{ key }}', this)">
+              TEST {{ label|upper }}
+            </button>
+          </td>
+          <td id="result-{{ key }}"><span class="help">Not tested yet</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Detected monitors</h2></div>
+  {% if monitors %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Monitor</th><th>Resolution</th><th>Position</th><th>Primary</th></tr></thead>
+      <tbody>
+        {% for monitor in monitors %}
+        <tr>
+          <td>{{ monitor.label }}</td>
+          <td>{{ monitor.width }} x {{ monitor.height }}</td>
+          <td>x={{ monitor.x }}, y={{ monitor.y }}</td>
+          <td>{{ 'Yes' if monitor.is_primary else 'No' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if monitors|length < 2 %}
+    <div class="info-box">Only one monitor detected. The customer display will open on this screen.</div>
+  {% endif %}
+  {% else %}
+    <div class="info-box">Monitor detection is only available on Windows.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+async function testDevice(device, button) {
+  const cell = document.getElementById('result-' + device);
+  button.disabled = true;
+  cell.innerHTML = '<span class="help">Testing...</span>';
+  try {
+    const response = await fetch('/admin/api/hardware/test/' + device, {
+      headers: {'X-CSRF-Token': '{{ csrf_token() }}'},
+    });
+    const data = await response.json();
+    const tone = data.ok ? 'badge-success' : 'badge-danger';
+    const label = data.ok ? 'CONNECTED' : 'DISCONNECTED';
+    const message = data.message || data.error || '';
+    cell.innerHTML = '<span class="badge ' + tone + '">' + label + '</span> <span class="help">' + message + '</span>';
+  } catch (err) {
+    cell.innerHTML = '<span class="badge badge-danger">UNAVAILABLE</span>';
+  }
+  button.disabled = false;
+}
+</script>
+{% endblock %}

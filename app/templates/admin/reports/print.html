@@ -1,0 +1,137 @@
+{# Browser print view. Deliberately chrome-free so it prints cleanly on A4. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ which|title }} Report - {{ business.name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <style>
+    body { background: #fff; color: #2b1c12; padding: 1.5rem; }
+    .print-head { border-bottom: 3px solid var(--brown-700, #5a3a1e); padding-bottom: .75rem; margin-bottom: 1rem; }
+    .print-head h1 { margin: 0; font-size: 1.4rem; }
+    .print-head p { margin: .15rem 0 0; color: #6b5b4f; font-size: .85rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+    th, td { border-bottom: 1px solid #e3d9cf; padding: .4rem .5rem; font-size: .8rem; text-align: left; }
+    th { background: #f6efe8; font-weight: 700; }
+    td.num, th.num { text-align: right; }
+    .totals { margin-top: 1rem; width: 45%; margin-left: auto; }
+    .no-print { margin-bottom: 1rem; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button class="btn btn-primary" onclick="window.print()">PRINT</button>
+    <a class="btn btn-ghost" href="{{ url_for('reports.index') }}">Back to reports</a>
+  </div>
+
+  <div class="print-head">
+    <h1>{{ business.name }}</h1>
+    <p>{{ business.tagline }}</p>
+    <p>{{ which|title }} Report &middot; {{ start.strftime('%d/%m/%Y') }} to {{ end.strftime('%d/%m/%Y') }}
+       &middot; Printed {{ now().strftime('%d/%m/%Y %H:%M') }}</p>
+  </div>
+
+  {% if which == 'products' %}
+    <table>
+      <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Revenue</th>
+        {% if show_profit %}<th class="num">Cost</th><th class="num">Profit</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.name }}</td><td class="num">{{ row.quantity }}</td>
+          <td class="num">{{ row.revenue|money }}</td>
+          {% if show_profit %}<td class="num">{{ row.cost|money }}</td><td class="num">{{ row.profit|money }}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif which == 'cashiers' %}
+    <table>
+      <thead><tr><th>Cashier</th><th class="num">Transactions</th><th class="num">Sales</th>
+        <th class="num">Cash</th><th class="num">Transfer</th><th class="num">Card</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.name }}</td><td class="num">{{ row.transactions }}</td>
+          <td class="num">{{ row.total|money }}</td><td class="num">{{ row.cash|money }}</td>
+          <td class="num">{{ row.transfer|money }}</td><td class="num">{{ row.card|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif which == 'inventory' %}
+    <table>
+      <thead><tr><th>Product</th><th class="num">Stock</th><th class="num">Minimum</th>
+        {% if show_cost %}<th class="num">Stock value</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.name }}</td><td class="num">{{ row.stock }}</td><td class="num">{{ row.minimum }}</td>
+          {% if show_cost %}<td class="num">{{ row.value|money }}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif which == 'profit' %}
+    <table class="totals">
+      <tbody>
+        <tr><td>Revenue</td><td class="num">{{ data.revenue|money }}</td></tr>
+        <tr><td>Cost of goods</td><td class="num">{{ data.cost|money }}</td></tr>
+        <tr><td><strong>Gross profit</strong></td><td class="num"><strong>{{ data.profit|money }}</strong></td></tr>
+      </tbody>
+    </table>
+    <table>
+      <thead><tr><th>Product</th><th class="num">Qty</th><th class="num">Revenue</th>
+        <th class="num">Cost</th><th class="num">Profit</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.name }}</td><td class="num">{{ row.quantity }}</td>
+          <td class="num">{{ row.revenue|money }}</td><td class="num">{{ row.cost|money }}</td>
+          <td class="num">{{ row.profit|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% else %}
+    {% if summary %}
+    <table class="totals">
+      <tbody>
+        <tr><td>Total sales</td><td class="num">{{ summary.total|money }}</td></tr>
+        <tr><td>Transactions</td><td class="num">{{ summary.transactions }}</td></tr>
+        <tr><td>Cash</td><td class="num">{{ summary.cash|money }}</td></tr>
+        <tr><td>Transfer</td><td class="num">{{ summary.transfer|money }}</td></tr>
+        <tr><td>Card</td><td class="num">{{ summary.card|money }}</td></tr>
+      </tbody>
+    </table>
+    {% endif %}
+    <table>
+      <thead><tr><th>Receipt</th><th>Date</th><th>Time</th><th>Cashier</th>
+        <th class="num">Items</th><th class="num">Total</th><th>Payment</th></tr></thead>
+      <tbody>
+        {% for sale in sales|default([]) %}
+        <tr>
+          <td>{{ sale.receipt_number }}</td>
+          <td>{{ sale.sale_date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ sale.sale_time }}</td>
+          <td>{{ sale.cashier_name }}</td>
+          <td class="num">{{ sale.item_count }}</td>
+          <td class="num">{{ sale.total_amount|money }}</td>
+          <td>{{ sale.payment_method }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <p style="margin-top:1.5rem;font-size:.75rem;color:#6b5b4f;">
+    {{ business.address_line1 }} {{ business.address_line2 }}, {{ business.address_city }}
+    &middot; {{ business.phone }} &middot; {{ business.email }}
+  </p>
+</body>
+</html>

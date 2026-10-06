@@ -1,0 +1,137 @@
+{% extends "admin/layout.html" %}
+{% block title %}Dashboard - {{ business.name }}{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="subtitle">Today&rsquo;s trading position &middot; updates automatically</p>
+  </div>
+  <div class="page-header-actions">
+    <span class="badge badge-success" data-live-recent></span>
+    <span class="badge badge-muted">Live &middot; <span id="live-updated">&mdash;</span></span>
+  </div>
+</div>
+
+<div id="live-dashboard" data-last-update="">
+  <div class="stat-grid">
+    <div class="stat-card stat-orange">
+      <span class="stat-label">Today&rsquo;s Sales</span>
+      <span class="stat-value" data-live="total">{{ summary.total|money }}</span>
+      <span class="stat-hint">
+        {% if compare > 0 %}&#9650; {{ compare|money }} vs yesterday
+        {% elif compare < 0 %}&#9660; {{ (-compare)|money }} vs yesterday
+        {% else %}Same as yesterday{% endif %}
+      </span>
+    </div>
+    <div class="stat-card stat-brown">
+      <span class="stat-label">Transactions</span>
+      <span class="stat-value" data-live="transactions">{{ summary.transactions }}</span>
+      <span class="stat-hint" data-live="items">{{ summary.items_sold }} items sold</span>
+    </div>
+    <div class="stat-card stat-green">
+      <span class="stat-label">Cash Sales</span>
+      <span class="stat-value" data-live="cash">{{ summary.cash|money }}</span>
+    </div>
+    <div class="stat-card stat-gold">
+      <span class="stat-label">Transfer Sales</span>
+      <span class="stat-value" data-live="transfer">{{ summary.transfer|money }}</span>
+    </div>
+    <div class="stat-card stat-brown">
+      <span class="stat-label">Card Sales</span>
+      <span class="stat-value" data-live="card">{{ summary.card|money }}</span>
+    </div>
+    <div class="stat-card stat-red">
+      <span class="stat-label">Refunds</span>
+      <span class="stat-value">{{ summary.refunds|money }}</span>
+    </div>
+    <div class="stat-card stat-red">
+      <span class="stat-label">Voids</span>
+      <span class="stat-value">{{ summary.voids|money }}</span>
+    </div>
+    <div class="stat-card stat-gold">
+      <span class="stat-label">Discounts Given</span>
+      <span class="stat-value">{{ summary.discount|money }}</span>
+    </div>
+    <div class="stat-card stat-orange">
+      <span class="stat-label">Low Stock</span>
+      <span class="stat-value" data-live="low-stock">{{ low_stock }}</span>
+      <span class="stat-hint">{{ out_of_stock }} out of stock</span>
+    </div>
+    <div class="stat-card stat-green">
+      <span class="stat-label">Active Cashiers</span>
+      <span class="stat-value">{{ active_cashiers }}</span>
+      <span class="stat-hint"><span data-live="open-shifts">{{ open_shift_count }}</span> open shift(s)</span>
+    </div>
+  </div>
+
+  <div style="display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));">
+    <div class="card">
+      <div class="card-head">
+        <h2>Recent Transactions</h2>
+        <a href="{{ url_for('sales.transactions') }}" class="btn btn-ghost btn-sm">VIEW ALL</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Receipt</th><th>Time</th><th>Cashier</th><th class="num">Total</th><th>Status</th></tr></thead>
+          <tbody data-live-recent>
+            {% for sale in recent %}
+            <tr>
+              <td><a href="{{ url_for('sales.transaction_detail', sale_id=sale.id) }}">{{ sale.receipt_number }}</a></td>
+              <td>{{ sale.sale_time }}</td>
+              <td>{{ sale.cashier_name }}</td>
+              <td class="num">{{ sale.total_amount|money }}</td>
+              <td><span class="badge badge-{{ 'success' if sale.status == 'COMPLETED' else ('danger' if sale.status == 'VOIDED' else 'warning') }}">{{ sale.status }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="center" style="padding:2rem;color:var(--grey-500);">No sales recorded today yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Last 7 Days</h2></div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Date</th><th class="num">Transactions</th><th class="num">Sales</th></tr></thead>
+          <tbody>
+            {% for row in daily %}
+            <tr>
+              <td>{{ row.date.strftime('%d/%m/%Y') }}</td>
+              <td class="num">{{ row.transactions }}</td>
+              <td class="num">{{ row.total|money }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="center" style="padding:2rem;color:var(--grey-500);">No sales in the last week.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if open_shifts %}
+  <div class="card">
+    <div class="card-head"><h2>Currently On Shift</h2></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Cashier</th><th>Opened</th><th class="num">Transactions</th><th class="num">Sales</th></tr></thead>
+        <tbody>
+          {% for shift in open_shifts %}
+          <tr>
+            <td>{{ shift.user.full_name if shift.user else '-' }}</td>
+            <td>{{ shift.opened_at.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td class="num">{{ shift.transaction_count }}</td>
+            <td class="num">{{ shift.total_sales|money }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

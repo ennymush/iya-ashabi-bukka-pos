@@ -1,0 +1,45 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, text_field, checkbox_field %}
+{% block title %}System Settings - {{ business.name }}{% endblock %}
+{% block topbar_title %}System Settings{% endblock %}
+
+{% block admin_content %}
+{% call page_header('System Settings', 'Tax, discounts, sessions, backups and customer display timing.') %}
+  <a class="btn btn-ghost" href="{{ url_for('admin.recovery_code') }}">PASSWORD RECOVERY CODE</a>
+  <a class="btn btn-ghost" href="{{ url_for('staff.permissions') }}">ROLE PERMISSIONS</a>
+{% endcall %}
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><h2>Sales rules</h2></div>
+  <div class="form-grid">
+    {{ checkbox_field('allow_sale_without_shift', 'Allow sales without opening a shift', system.get('system.allow_sale_without_shift') == '1', 'Recommended: off, so cash is always counted') }}
+    {{ checkbox_field('allow_negative_stock', 'Allow selling when stock is zero', system.get('system.allow_negative_stock') == '1', 'Only enable if you do not track counts closely') }}
+    {{ checkbox_field('tax_enabled', 'Add tax to sales', system.get('system.tax_enabled') == '1') }}
+    {{ text_field('default_tax_rate', 'Default tax rate (%)', system.get('system.default_tax_rate', '0'), 'Leave at 0 if you do not charge tax.') }}
+    {{ text_field('max_discount_percent_cashier', 'Maximum percentage discount a cashier may give', system.get('system.max_discount_percent_cashier', '10')) }}
+    {{ text_field('max_discount_amount_cashier', 'Maximum fixed discount a cashier may give (Naira)', system.get('system.max_discount_amount_cashier', '0')) }}
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>Security</h2></div>
+  <div class="form-grid">
+    {{ text_field('session_timeout', 'Sign out automatically after (minutes of inactivity)', system.get('system.session_timeout', '30'), 'Prevents an unattended till staying open.') }}
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>Backups</h2></div>
+  <div class="form-grid">
+    {{ checkbox_field('auto_backup', 'Take one automatic backup every day', system.get('system.auto_backup') == '1') }}
+    {{ text_field('backup_retention', 'How many automatic backups to keep', system.get('system.backup_retention', '30'), 'Example: 30 keeps one month of daily backups.') }}
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>Customer display</h2></div>
+  <div class="form-grid">
+    {{ text_field('customer_display_idle_seconds', 'Return to the welcome screen after (seconds)', system.get('system.customer_display_idle_seconds', '60')) }}
+  </div>
+
+  <div class="form-actions">
+    <span></span>
+    <button type="submit" class="btn btn-primary">SAVE SYSTEM SETTINGS</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state %}
+{% block title %}Product Sales - {{ business.name }}{% endblock %}
+{% block topbar_title %}Product Sales Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Product Sales Report', 'How much of each product was sold.') %}
+  {% if g.user.has_any_permission('reports.print') %}
+    <a class="btn btn-ghost" href="{{ url_for('reports.print_view', type='products', range=preset) }}">PRINT</a>
+  {% endif %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='products') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.product_report'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Products sold', rows|sum(attribute='quantity'), 'gold') }}
+  {{ stat_card('Revenue', rows|sum(attribute='revenue')|money, 'brown') }}
+  {% if show_profit %}
+    {{ stat_card('Cost', rows|sum(attribute='cost')|money, 'orange') }}
+    {{ stat_card('Gross profit', rows|sum(attribute='profit')|money, 'green') }}
+  {% endif %}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th><th>SKU</th><th>Category</th>
+          <th class="num">Quantity Sold</th><th class="num">Revenue</th>
+          {% if show_profit %}<th class="num">Cost</th><th class="num">Gross Profit</th><th class="num">Margin</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.name }}</strong></td>
+          <td class="help">{{ row.sku or '-' }}</td>
+          <td>{{ row.category or '-' }}</td>
+          <td class="num">{{ row.quantity }}</td>
+          <td class="num">{{ row.revenue|money }}</td>
+          {% if show_profit %}
+            <td class="num">{{ row.cost|money }}</td>
+            <td class="num"><strong>{{ row.profit|money }}</strong></td>
+            <td class="num">{{ '%.1f'|format(row.margin) }}%</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No products were sold in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

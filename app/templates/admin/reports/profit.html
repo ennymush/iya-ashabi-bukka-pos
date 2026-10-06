@@ -1,0 +1,53 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state %}
+{% block title %}Profit Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Profit Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Profit Report', 'Revenue, cost of goods and gross profit. Visible to authorised managers only.') %}
+  {% if g.user.has_any_permission('reports.print') %}
+    <a class="btn btn-ghost" href="{{ url_for('reports.print_view', type='profit', range=preset) }}">PRINT</a>
+  {% endif %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='profit') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.profit_report'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Revenue', data.revenue|money, 'brown') }}
+  {{ stat_card('Cost of goods', data.cost|money, 'orange') }}
+  {{ stat_card('Gross profit', data.profit|money, 'green') }}
+  {{ stat_card('Margin', '%.1f'|format(data.margin) ~ '%', 'gold') }}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Profit by product</h2></div>
+  {% if products %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Product</th><th class="num">Quantity</th><th class="num">Revenue</th>
+            <th class="num">Cost</th><th class="num">Gross profit</th><th class="num">Margin</th></tr>
+      </thead>
+      <tbody>
+        {% for row in products %}
+        <tr>
+          <td><strong>{{ row.name }}</strong></td>
+          <td class="num">{{ row.quantity }}</td>
+          <td class="num">{{ row.revenue|money }}</td>
+          <td class="num">{{ row.cost|money }}</td>
+          <td class="num"><strong>{{ row.profit|money }}</strong></td>
+          <td class="num">{{ '%.1f'|format(row.margin) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No sales in this period, so there is no profit to report.',
+                   'Add cost prices to your products for accurate profit figures.') }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state %}
+{% block title %}Void Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Void Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Void Report', 'Cancelled transactions. Voided sales stay in the database for auditing.') %}
+  <a class="btn btn-ghost" href="{{ url_for('sales.voids_list') }}?range={{ preset }}">ALL VOIDS</a>
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='voids') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.void_report'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Voids', rows|length, 'gold') }}
+  {{ stat_card('Total voided', rows|sum(attribute='total')|money, 'red') }}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Receipt</th><th>Date</th><th>Time</th><th>Cashier</th>
+            <th class="num">Total</th><th>Voided by</th><th>Voided at</th><th>Reason</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.receipt_number }}</td>
+          <td>{{ row.date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ row.time }}</td>
+          <td>{{ row.cashier }}</td>
+          <td class="num">{{ row.total|money }}</td>
+          <td>{{ row.voided_by or '-' }}</td>
+          <td>{{ row.voided_at.strftime('%d/%m/%Y %H:%M') if row.voided_at else '-' }}</td>
+          <td>{{ row.reason or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No voids in this period.', 'Voids are not a normal event - a good sign!') }}
+  {% endif %}
+</div>
+{% endblock %}

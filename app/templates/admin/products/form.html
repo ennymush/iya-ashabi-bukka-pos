@@ -1,0 +1,67 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, money_field, text_field, checkbox_field %}
+{% block title %}{{ 'Edit Product' if product else 'Add Product' }} - {{ business.name }}{% endblock %}
+{% block topbar_title %}{{ 'Edit Product' if product else 'Add Product' }}{% endblock %}
+
+{% block admin_content %}
+{% set is_edit = product is not none %}
+{% call page_header('Edit Product' if is_edit else 'Add Product',
+                    'Once saved, this product is immediately available at the till.') %}
+  <a class="btn btn-ghost" href="{{ url_for('products.list_products') }}">BACK TO PRODUCTS</a>
+{% endcall %}
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><h2>Product details</h2></div>
+
+  <div class="form-grid">
+    {{ text_field('name', 'Product name', product.name if is_edit else '', 'Example: Jollof Rice', required=true) }}
+
+    <div class="field">
+      <label for="category_id">Category</label>
+      <select id="category_id" name="category_id">
+        <option value="">No category</option>
+        {% for category in categories %}
+          <option value="{{ category.id }}"
+            {{ 'selected' if is_edit and product.category_id == category.id }}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {{ money_field('selling_price', 'Selling price (Naira)', product.selling_price if is_edit else '', 'The price the cashier charges. Required.', required=true) }}
+
+    {% if show_cost %}
+      {{ money_field('cost_price', 'Cost price (Naira)', product.cost_price if is_edit else '', 'Used for profit reports. Managers and cashiers never see this.') }}
+    {% endif %}
+
+    <div class="field">
+      <label for="stock_quantity">Opening stock</label>
+      <input type="number" id="stock_quantity" name="stock_quantity" min="0"
+             value="{{ product.stock_quantity if is_edit else 0 }}">
+      <span class="help">Recorded as an "Opening Stock" movement so the change is never silent.</span>
+    </div>
+
+    <div class="field">
+      <label for="minimum_stock">Minimum stock (low-stock alert)</label>
+      <input type="number" id="minimum_stock" name="minimum_stock" min="0"
+             value="{{ product.minimum_stock if is_edit else 0 }}">
+      <span class="help">A warning appears at or below this level.</span>
+    </div>
+
+    {{ text_field('sku', 'SKU / product code', product.sku if is_edit else '', 'Optional. Used for searching and Excel reports.') }}
+    {{ text_field('barcode', 'Barcode', product.barcode if is_edit else '', 'Optional. Scan or type the barcode printed on the product.') }}
+    {{ text_field('unit', 'Unit', product.unit if is_edit else 'portion', 'portion, plate, bowl, bottle...') }}
+    {{ text_field('description', 'Description', product.description if is_edit else '') }}
+    {{ text_field('preparation_notes', 'Preparation notes', product.preparation_notes if is_edit else '') }}
+  </div>
+
+  <div class="form-actions">
+    {% if is_edit %}
+      {{ checkbox_field('is_active', 'Active (available at the till)', product.is_active) }}
+    {% endif %}
+    <span></span>
+    <a class="btn btn-ghost" href="{{ url_for('products.list_products') }}">CANCEL</a>
+    <button type="submit" class="btn btn-primary">SAVE</button>
+  </div>
+</form>
+{% endblock %}

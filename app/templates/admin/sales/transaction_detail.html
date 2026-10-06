@@ -1,0 +1,144 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, status_badge %}
+{% block title %}{{ sale.receipt_number }} - {{ business.name }}{% endblock %}
+{% block topbar_title %}Transaction Detail{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Receipt ' ~ sale.receipt_number,
+                    sale.sale_date.strftime('%d/%m/%Y') ~ ' at ' ~ sale.sale_time ~ ' by ' ~ sale.cashier_name) %}
+  <button class="btn btn-ghost" type="button" onclick="window.print()">PRINT</button>
+  {% if g.user.has_any_permission('sales.print') %}
+    <button class="btn btn-primary" type="button" onclick="reprint({{ sale.id }}, this)">REPRINT RECEIPT</button>
+  {% endif %}
+  <a class="btn btn-ghost" href="{{ url_for('sales.transactions') }}">BACK</a>
+{% endcall %}
+
+{% if sale.status == 'VOIDED' %}
+  <div class="hint-box">
+    <strong>VOIDED</strong> by {{ sale.voided_by.full_name if sale.voided_by else 'someone' }}
+    on {{ sale.voided_at.strftime('%d/%m/%Y %H:%M') if sale.voided_at else '-' }}.
+    Reason: {{ sale.void_reason or 'not given' }}. The original sale record is kept for auditing.
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head">
+    <h2>Items</h2>
+    {{ status_badge(sale.status) }}
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Product</th><th>SKU</th><th class="num">Qty</th>
+            <th class="num">Unit price</th><th class="num">Discount</th>
+            <th class="num">Tax</th><th class="num">Line total</th></tr>
+      </thead>
+      <tbody>
+        {% for item in sale.items %}
+        <tr>
+          <td>{{ item.product_name }}</td>
+          <td class="help">{{ item.sku or '-' }}</td>
+          <td class="num">{{ item.quantity }} {{ item.unit or '' }}</td>
+          <td class="num">{{ item.unit_price|money }}</td>
+          <td class="num">{{ item.discount_amount|money }}</td>
+          <td class="num">{{ item.tax_amount|money }}</td>
+          <td class="num">{{ item.line_total|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="card">
+  <div class="card-head"><h2>Payment summary</h2></div>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td>Subtotal</td><td class="num">{{ sale.subtotal|money }}</td></tr>
+        <tr><td>Discount
+          {% if sale.discount_type %}<span class="help">({{ sale.discount_type }} {{ sale.discount_value }})</span>{% endif %}
+        </td><td class="num">{{ sale.discount_amount|money }}</td></tr>
+        <tr><td>Tax</td><td class="num">{{ sale.tax_amount|money }}</td></tr>
+        <tr><td><strong>TOTAL</strong></td><td class="num"><strong>{{ sale.total_amount|money }}</strong></td></tr>
+        <tr><td>Payment method</td><td class="num">{{ sale.payment_method }}</td></tr>
+        <tr><td>Amount received</td><td class="num">{{ sale.amount_received|money }}</td></tr>
+        <tr><td>Change given</td><td class="num">{{ sale.change_given|money }}</td></tr>
+        {% if show_cost %}
+          <tr><td>Cost of goods</td><td class="num">{{ sale.cost_total|money }}</td></tr>
+          <tr><td><strong>Gross profit</strong></td>
+              <td class="num"><strong>{{ profit|money_minor }}</strong></td></tr>
+        {% endif %}
+        <tr><td>Cashier</td><td class="num">{{ sale.cashier_name }}</td></tr>
+        <tr><td>Shift</td><td class="num">{{ 'Shift #' ~ sale.shift_id if sale.shift_id else 'No shift' }}</td></tr>
+        <tr><td>Terminal</td><td class="num">{{ sale.terminal.name if sale.terminal else '-' }}</td></tr>
+        {% if sale.note %}<tr><td>Note</td><td class="num">{{ sale.note }}</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if returns %}
+<div class="card">
+  <div class="card-head"><h2>Refunds against this sale</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Refund</th><th>Date</th><th>Reason</th><th>Method</th>
+                 <th>By</th><th>Approved by</th><th class="num">Amount</th></tr></thead>
+      <tbody>
+        {% for record in returns %}
+        <tr>
+          <td>{{ record.return_number }}</td>
+          <td>{{ record.sale_date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ record.reason }}</td>
+          <td>{{ record.refund_method }}</td>
+          <td>{{ record.user.full_name if record.user else '-' }}</td>
+          <td>{{ record.approved_by.full_name if record.approved_by else '-' }}</td>
+          <td class="num">{{ record.total_amount|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if sale.status == 'COMPLETED' %}
+<div class="danger-zone">
+  <h2>Correct this transaction</h2>
+  <p>Nothing is ever deleted. A void marks the sale as cancelled and restores stock;
+     a refund returns the money and references this receipt.</p>
+  <div class="form-actions">
+    {% if g.user.has_any_permission('sales.refund') %}
+      <a class="btn btn-gold" href="{{ url_for('sales.refund_transaction', sale_id=sale.id) }}">REFUND</a>
+    {% endif %}
+    {% if g.user.has_any_permission('sales.void') %}
+      <form method="post" action="{{ url_for('sales.void_transaction', sale_id=sale.id) }}" class="filter-extra">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="reason" placeholder="Reason for voiding" required>
+        <button class="btn btn-danger" type="submit"
+                onclick="return confirm('Void {{ sale.receipt_number }}?')">VOID SALE</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+async function reprint(saleId, button) {
+  const token = '{{ csrf_token() }}';
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Printing...';
+  const response = await fetch(`/admin/sales/transactions/${saleId}/print-receipt`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': token},
+    body: 'csrf_token=' + encodeURIComponent(token),
+  });
+  const data = await response.json();
+  button.textContent = data.ok ? 'PRINTED' : 'FAILED';
+  setTimeout(() => { button.textContent = original; button.disabled = false; }, 2200);
+}
+</script>
+{% endblock %}

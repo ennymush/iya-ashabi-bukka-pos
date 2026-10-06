@@ -1,0 +1,72 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, status_badge, text_field, empty_state %}
+{% block title %}Categories - {{ business.name }}{% endblock %}
+{% block topbar_title %}Categories{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Categories', 'Categories group products on the till. Deactivating hides them without deleting.') %}
+  <a class="btn btn-primary" href="{{ url_for('products.list_products') }}">BACK TO PRODUCTS</a>
+{% endcall %}
+
+<div class="card">
+  <div class="card-head">
+    <h2>{{ 'Edit Category' if editing else 'Add Category' }}</h2>
+  </div>
+  <form method="post" action="{{ url_for('products.edit_category', category_id=editing.id) if editing else url_for('products.categories') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      {{ text_field('name', 'Category name', editing.name if editing else '', 'Example: Main Meals', required=true) }}
+      {{ text_field('color', 'Colour (optional)', editing.color if editing else '', 'Example: #E2761B') }}
+      {{ text_field('icon', 'Icon or emoji (optional)', editing.icon if editing else '', 'Example: 🍚') }}
+      <div class="field">
+        <label for="sort_order">Sort order</label>
+        <input type="number" id="sort_order" name="sort_order" value="{{ editing.sort_order if editing else 0 }}">
+        <span class="help">Lower numbers appear first on the till.</span>
+      </div>
+    </div>
+    <div class="form-actions">
+      <span></span>
+      {% if editing %}
+        <a class="btn btn-ghost" href="{{ url_for('products.categories') }}">CANCEL</a>
+      {% endif %}
+      <button type="submit" class="btn btn-primary">{{ 'SAVE CHANGES' if editing else 'ADD CATEGORY' }}</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>All categories</h2></div>
+  {% if categories %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Products</th><th class="num">Order</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for category in categories %}
+        <tr>
+          <td>
+            {% if category.icon %}<span aria-hidden="true">{{ category.icon }}</span> {% endif %}
+            <strong>{{ category.name }}</strong>
+            {% if category.color %}<span class="badge badge-muted">{{ category.color }}</span>{% endif %}
+          </td>
+          <td class="num">{{ category.products|length }}</td>
+          <td class="num">{{ category.sort_order }}</td>
+          <td>{{ status_badge('ACTIVE' if category.is_active else 'INACTIVE') }}</td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('products.edit_category', category_id=category.id) }}">EDIT</a>
+            <form method="post" action="{{ url_for('products.toggle_category', category_id=category.id) }}" style="display:inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-ghost btn-sm">
+                {{ 'DEACTIVATE' if category.is_active else 'ACTIVATE' }}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No categories yet.', 'Add one above to group your products.') }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+# Iya Ashabi Bukka Limited - POS System
+# Production pinned versions (Python 3.10+)
+
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-Login==0.6.3
+SQLAlchemy==2.0.32
+alembic==1.20.0
+Werkzeug==3.0.3
+Jinja2==3.1.4
+itsdangerous==2.2.0
+MarkupSafe==2.1.5
+openpyxl==3.1.5
+Pillow==10.4.0
+python-dotenv==1.0.1
+
+# Reading PDF price lists (Excel, CSV and Word need no extra library)
+pypdf==6.1.1
+
+# Windows hardware integration (optional on non-Windows)
+pywin32==312; sys_platform == "win32"
+
+# Testing
+pytest==9.1.1
+
+# Packaging
+pyinstaller==6.11.1; sys_platform == "win32"

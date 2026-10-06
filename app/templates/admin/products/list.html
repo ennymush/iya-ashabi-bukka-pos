@@ -1,0 +1,83 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, status_badge, stock_badge, empty_state %}
+{% block title %}Products - {{ business.name }}{% endblock %}
+{% block topbar_title %}Products{% endblock %}
+
+{% block admin_content %}
+{% call page_header('All Products', 'Everything the cashier can sell. Prices here are what the till shows.') %}
+  <a class="btn btn-ghost" href="{{ url_for('products.price_history') }}">PRICE HISTORY</a>
+  {% if g.user.has_any_permission('products.categories') %}
+    <a class="btn btn-ghost" href="{{ url_for('products.categories') }}">CATEGORIES</a>
+  {% endif %}
+  {% if g.user.has_any_permission('products.manage') %}
+    <a class="btn btn-ghost" href="{{ url_for('products.import_products') }}">IMPORT PRICE LIST</a>
+    <a class="btn btn-primary" href="{{ url_for('products.create_product') }}">+ ADD PRODUCT</a>
+  {% endif %}
+{% endcall %}
+
+<form method="get" class="filter-bar">
+  <div class="filter-presets">
+    {% for key, label in [('all','All'),('active','Active'),('inactive','Inactive'),('low','Low Stock')] %}
+      <a class="chip {{ 'active' if status == key }}" href="{{ url_for('products.list_products') }}?status={{ key }}{% if query %}&q={{ query }}{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ query }}" placeholder="Search name, SKU or barcode">
+    <select name="category_id">
+      <option value="">All categories</option>
+      {% for category in categories %}
+        <option value="{{ category.id }}" {{ 'selected' if selected_category == category.id }}>{{ category.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">SEARCH</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if products %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Category</th>
+          <th>SKU / Barcode</th>
+          <th class="num">Selling Price</th>
+          {% if show_cost %}<th class="num">Cost Price</th>{% endif %}
+          <th class="num">Stock</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for product in products %}
+        <tr>
+          <td>
+            <strong>{{ product.name }}</strong>
+            {% if product.description %}<div class="help">{{ product.description }}</div>{% endif %}
+          </td>
+          <td>{{ product.category.name if product.category else '-' }}</td>
+          <td class="help">{{ product.sku or '-' }}{% if product.barcode %}<br>{{ product.barcode }}{% endif %}</td>
+          <td class="num">{{ product.selling_price|money }}</td>
+          {% if show_cost %}<td class="num">{{ product.cost_price|money }}</td>{% endif %}
+          <td class="num">
+            {{ product.stock_quantity }}
+            {% if product.is_low %}<div>{{ stock_badge(product) }}</div>{% endif %}
+          </td>
+          <td>{{ status_badge('ACTIVE' if product.is_active else 'INACTIVE') }}</td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('products.view_product', product_id=product.id) }}">VIEW</a>
+            {% if g.user.has_any_permission('products.manage') %}
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('products.edit_product', product_id=product.id) }}">EDIT</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No products found.', 'Use ADD PRODUCT to create one - it appears on the till immediately.') }}
+  {% endif %}
+</div>
+{% endblock %}

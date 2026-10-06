@@ -1,0 +1,61 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, status_badge, empty_state %}
+{% block title %}Inventory Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Inventory Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Inventory Report', 'Current stock levels and the value of stock on hand.') %}
+  {% if g.user.has_any_permission('reports.print') %}
+    <a class="btn btn-ghost" href="{{ url_for('reports.print_view', type='inventory') }}">PRINT</a>
+  {% endif %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='inventory') }}">EXPORT EXCEL</a>
+  {% endif %}
+  <a class="btn btn-ghost" href="{{ url_for('inventory.stock_list') }}">MANAGE STOCK</a>
+{% endcall %}
+
+<div class="stat-grid">
+  {{ stat_card('Products', rows|length, 'gold') }}
+  {{ stat_card('Low stock', rows|selectattr('status', 'equalto', 'LOW STOCK')|list|length, 'orange') }}
+  {{ stat_card('Out of stock', rows|selectattr('status', 'equalto', 'OUT OF STOCK')|list|length, 'red') }}
+  {% if show_cost %}
+    {{ stat_card('Stock value (at cost)', rows|sum(attribute='value')|money, 'brown') }}
+  {% endif %}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th><th>SKU</th><th>Category</th>
+          <th class="num">Stock</th><th class="num">Minimum</th><th>Status</th>
+          <th class="num">Selling price</th>
+          {% if show_cost %}<th class="num">Cost</th><th class="num">Stock value</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.name }}</strong>{% if not row.active %} <span class="badge badge-muted">INACTIVE</span>{% endif %}</td>
+          <td class="help">{{ row.sku or '-' }}</td>
+          <td>{{ row.category or '-' }}</td>
+          <td class="num">{{ row.stock }}</td>
+          <td class="num">{{ row.minimum }}</td>
+          <td>{{ status_badge(row.status) }}</td>
+          <td class="num">{{ row.price|money }}</td>
+          {% if show_cost %}
+            <td class="num">{{ row.cost|money }}</td>
+            <td class="num">{{ row.value|money }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No products yet.') }}
+  {% endif %}
+</div>
+{% endblock %}

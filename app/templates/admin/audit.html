@@ -1,0 +1,66 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, empty_state, pagination %}
+{% block title %}Audit Logs - {{ business.name }}{% endblock %}
+{% block topbar_title %}Audit Logs{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Audit Logs', 'Who did what, and when. Passwords are never recorded here.') %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='audit', range='all') }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+<form method="get" class="filter-bar">
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Search descriptions and users">
+    <select name="action">
+      <option value="">All actions</option>
+      {% for action in actions %}
+        <option value="{{ action }}" {{ 'selected' if request.args.get('action') == action }}>{{ action }}</option>
+      {% endfor %}
+    </select>
+    <select name="entity_type">
+      <option value="">All record types</option>
+      {% for value in ['Sale', 'Product', 'User', 'Shift', 'Setting', 'PriceHistory', 'InventoryMovement', 'Backup', 'ReturnRecord', 'HeldSale'] %}
+        <option value="{{ value }}" {{ 'selected' if request.args.get('entity_type') == value }}>{{ value }}</option>
+      {% endfor %}
+    </select>
+    <select name="user_id">
+      <option value="">All users</option>
+      {% for member in users %}
+        <option value="{{ member.id }}" {{ 'selected' if request.args.get('user_id')|int == member.id }}>{{ member.full_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">SEARCH</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if entries.items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Date / Time</th><th>User</th><th>Role</th><th>Action</th>
+            <th>Record</th><th>Description</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+        {% for entry in entries.items %}
+        <tr>
+          <td>{{ entry.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+          <td>{{ entry.username or '-' }}</td>
+          <td>{{ entry.user_role or '-' }}</td>
+          <td><span class="badge badge-info">{{ entry.action }}</span></td>
+          <td class="help">{{ entry.entity_type }}{% if entry.entity_id %} #{{ entry.entity_id }}{% endif %}</td>
+          <td>{{ entry.description }}</td>
+          <td class="help">{{ entry.ip_address or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(entries, url_for('admin.audit_logs')) }}
+  {% else %}
+    {{ empty_state('No audit entries match your search.') }}
+  {% endif %}
+</div>
+{% endblock %}

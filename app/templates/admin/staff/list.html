@@ -1,0 +1,81 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, status_badge, empty_state %}
+{% block title %}Staff - {{ business.name }}{% endblock %}
+{% block topbar_title %}Staff{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Staff', 'Create cashier and manager accounts, and deactivate them when they leave.') %}
+  {% if g.user.has_any_permission('staff.permissions') %}
+    <a class="btn btn-ghost" href="{{ url_for('staff.permissions') }}">PERMISSIONS</a>
+  {% endif %}
+  {% if can_manage %}
+    <a class="btn btn-primary" href="{{ url_for('staff.create_staff') }}">+ ADD STAFF</a>
+  {% endif %}
+{% endcall %}
+
+<form method="get" class="filter-bar">
+  <div class="filter-presets">
+    {% for key, label in [('all','All'),('active','Active'),('inactive','Inactive')] %}
+      <a class="chip {{ 'active' if status == key }}" href="{{ url_for('staff.list_staff') }}?status={{ key }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ query }}" placeholder="Search name or username">
+    <select name="role">
+      <option value="all">All roles</option>
+      {% for role in ['ADMIN', 'MANAGER', 'CASHIER'] %}
+        <option value="{{ role }}" {{ 'selected' if role_filter == role }}>{{ role }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">SEARCH</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if users %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th>
+            <th class="num">Transactions</th><th class="num">Total sales</th>
+            <th>Last login</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for member in users %}
+        <tr>
+          <td>
+            <strong>{{ member.full_name }}</strong>
+            {% if not member.is_active %}<div class="help">Can no longer sign in</div>{% endif %}
+          </td>
+          <td>{{ member.username }}</td>
+          <td>{{ member.role_name }}</td>
+          <td>{{ status_badge('ACTIVE' if member.is_active else 'INACTIVE') }}</td>
+          <td class="num">{{ member.stats.transactions }}</td>
+          <td class="num">{{ (member.stats.total_sales|int / 100)|money_minor }}</td>
+          <td class="help">
+            {{ member.stats.last_login.strftime('%d/%m/%Y %H:%M') if member.stats.last_login else 'Never' }}
+          </td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('staff.view_staff', user_id=member.id) }}">VIEW</a>
+            {% if can_manage %}
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('staff.edit_staff', user_id=member.id) }}">EDIT</a>
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('staff.reset_password', user_id=member.id) }}">RESET PASSWORD</a>
+              <form method="post" action="{{ url_for('staff.toggle_active', user_id=member.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-ghost btn-sm">
+                  {{ 'DEACTIVATE' if member.is_active else 'ACTIVATE' }}
+                </button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No staff accounts found.',
+                   'Use ADD STAFF to create a cashier. They can sign in immediately.') }}
+  {% endif %}
+</div>
+{% endblock %}

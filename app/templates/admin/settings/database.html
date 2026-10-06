@@ -1,0 +1,116 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, status_badge %}
+{% block title %}Database and Backup - {{ business.name }}{% endblock %}
+{% block topbar_title %}Database &amp; Backup{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Database &amp; Backup', 'Back up your sales data regularly and keep it somewhere safe.') %}
+{% endcall %}
+
+{% if integrity[0] %}
+  <div class="info-box">Database integrity check: <strong>OK</strong>. Your data is healthy.</div>
+{% else %}
+  <div class="danger-zone">
+    <strong>Database integrity problem:</strong> {{ integrity[1] }}<br>
+    Restore a known-good backup as soon as possible.
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><h2>Create a backup now</h2></div>
+  <div class="info-box">
+    A backup is a safe copy of your whole database - products, staff, sales and reports.
+    Making one never stops the till.
+  </div>
+  <form method="post" class="form-actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="backup">
+    <span></span>
+    <button type="submit" class="btn btn-primary btn-lg">BACKUP DATABASE</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Where your data lives</h2></div>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td>Application data folder</td><td><code>{{ data_dir }}</code></td></tr>
+        <tr><td>Backup folder</td><td><code>{{ backup_dir }}</code></td></tr>
+        <tr><td>Automatic daily backup</td>
+            <td>{{ 'Enabled' if system.get('system.auto_backup') == '1' else 'Disabled' }}</td></tr>
+        <tr><td>Backups kept</td><td>{{ system.get('system.backup_retention', '30') }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="help">Copy the backup folder to a USB drive regularly so your data survives if this computer fails.</p>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Existing backups</h2></div>
+  {% if backups %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>File</th><th>Type</th><th>Created</th><th class="num">Size</th>
+                 <th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for entry in backups %}
+        <tr>
+          <td><code>{{ entry.filename }}</code></td>
+          <td>{{ entry.kind }}</td>
+          <td>{{ entry.created_at.strftime('%d/%m/%Y %H:%M') if entry.created_at else '-' }}</td>
+          <td class="num">{{ (entry.size_bytes / 1024)|round|int if entry.size_bytes else 0 }} KB</td>
+          <td>{{ status_badge(entry.status) }}</td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.download_backup', backup_id=entry.id) }}">DOWNLOAD</a>
+            {% if g.user.has_any_permission('sales.void') %}
+              <form method="post" action="{{ url_for('admin.delete_backup', backup_id=entry.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-ghost btn-sm"
+                        onclick="return confirm('Delete {{ entry.filename }}?')">DELETE</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty"><h3>No backups yet.</h3><p class="help">Create your first backup above.</p></div>
+  {% endif %}
+</div>
+
+<div class="danger-zone">
+  <h2>Restore from a backup</h2>
+  <p>
+    <strong>Warning:</strong> restoring replaces all current data with the contents of the
+    backup file. A safety backup of your current database is taken automatically first,
+    and the backup file is checked before anything is changed.
+  </p>
+
+  <form method="post" class="form-actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="restore">
+    <select name="filename">
+      {% for entry in backups if entry.status == 'SUCCESS' %}
+        <option value="{{ entry.filename }}">{{ entry.filename }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-danger"
+            onclick="return confirm('Restore the database? All current data will be replaced.')">
+      RESTORE SELECTED BACKUP
+    </button>
+  </form>
+
+  <h2 style="margin-top:1.5rem;">Restore from a file on this computer</h2>
+  <form method="post" action="{{ url_for('admin.upload_restore') }}" enctype="multipart/form-data" class="form-actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="file" name="backup_file" accept=".db" required>
+    <button type="submit" class="btn btn-danger"
+            onclick="return confirm('Restore from this file? All current data will be replaced.')">
+      UPLOAD AND RESTORE
+    </button>
+  </form>
+</div>
+{% endblock %}

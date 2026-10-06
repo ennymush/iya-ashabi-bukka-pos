@@ -1,0 +1,74 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state %}
+{% block title %}Reports - {{ business.name }}{% endblock %}
+{% block topbar_title %}Reports{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Reports', 'Choose a report, filter the period, then view, print or export to Excel.') %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-ghost" href="{{ url_for('reports.export', report_type='sales') }}">EXPORT SALES (EXCEL)</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.index'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Total sales', summary.total|money, 'brown') }}
+  {{ stat_card('Transactions', summary.transactions, 'gold') }}
+  {{ stat_card('Cash', summary.cash|money, 'green') }}
+  {{ stat_card('Transfer', summary.transfer|money, 'green') }}
+  {{ stat_card('Card', summary.card|money, 'green') }}
+  {{ stat_card('Items sold', summary.items_sold, 'orange') }}
+  {{ stat_card('Refunds', summary.refunds|money, 'red') }}
+  {{ stat_card('Voids', summary.voids|money, 'red') }}
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Available reports</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Report</th><th>What it shows</th><th class="num">Actions</th></tr></thead>
+      <tbody>
+        {% for key, label, endpoint in available_reports %}
+        <tr>
+          <td><strong>{{ label }}</strong></td>
+          <td class="help">Totals for the selected period, with the same date filters.</td>
+          <td class="num">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.' ~ endpoint) }}?range={{ preset }}">VIEW</a>
+            {% if g.user.has_any_permission('reports.print') %}
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.print_view') }}?type={{ key }}&range={{ preset }}">PRINT</a>
+            {% endif %}
+            {% if g.user.has_any_permission('reports.export') %}
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.export', report_type=key) }}?range={{ preset }}">EXCEL</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Day by day</h2></div>
+  {% if daily %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th class="num">Transactions</th><th class="num">Discounts</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        {% for row in daily %}
+        <tr>
+          <td>{{ row.date.strftime('%d/%m/%Y') }}</td>
+          <td class="num">{{ row.transactions }}</td>
+          <td class="num">{{ row.discount|money }}</td>
+          <td class="num"><strong>{{ row.total|money }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No sales in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

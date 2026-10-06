@@ -1,0 +1,53 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, date_range_filter, empty_state, pagination %}
+{% block title %}Returns - {{ business.name }}{% endblock %}
+{% block topbar_title %}Returns{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Returns and Refunds', 'Each refund references the original receipt. Originals are never deleted.') %}
+  <a class="btn btn-ghost" href="{{ url_for('sales.transactions') }}">TRANSACTIONS</a>
+{% endcall %}
+
+{{ date_range_filter(url_for('sales.returns_list'), start, end, preset) }}
+
+<form method="get" class="filter-bar">
+  <input type="hidden" name="range" value="{{ preset }}">
+  <div class="filter-dates">
+    <input type="search" name="q" value="{{ request.args.get('q', '') }}" placeholder="Return or receipt number">
+    <button type="submit" class="btn btn-primary btn-sm">SEARCH</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if records.items %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Return</th><th>Original receipt</th><th>Date</th><th>Time</th>
+            <th>Items</th><th>Reason</th><th>By</th><th>Method</th><th class="num">Amount</th></tr>
+      </thead>
+      <tbody>
+        {% for record in records.items %}
+        <tr>
+          <td>{{ record.return_number }}</td>
+          <td><a href="{{ url_for('sales.transaction_detail', sale_id=record.sale_id) }}">{{ record.original_receipt }}</a></td>
+          <td>{{ record.sale_date.strftime('%d/%m/%Y') }}</td>
+          <td>{{ record.sale_time }}</td>
+          <td class="help">
+            {% for item in record.items %}{{ item.product_name }} x{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}
+          </td>
+          <td>{{ record.reason }}</td>
+          <td>{{ record.user.full_name if record.user else '-' }}</td>
+          <td>{{ record.refund_method }}</td>
+          <td class="num"><strong>{{ record.total_amount|money }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pagination(records, url_for('sales.returns_list')) }}
+  {% else %}
+    {{ empty_state('No returns in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

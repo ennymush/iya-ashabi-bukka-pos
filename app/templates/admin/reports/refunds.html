@@ -1,0 +1,51 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state %}
+{% block title %}Refund Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Refund Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Refund Report', 'Every refund. The original sale is always kept.') %}
+  <a class="btn btn-ghost" href="{{ url_for('sales.returns_list') }}?range={{ preset }}">ALL RETURNS</a>
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='refunds') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.refund_report'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Refunds', rows|length, 'gold') }}
+  {{ stat_card('Total refunded', rows|sum(attribute='amount')|money, 'red') }}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Refund</th><th>Original receipt</th><th>Date</th><th>Items</th>
+            <th>Reason</th><th>Method</th><th>By</th><th class="num">Amount</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.return_number }}</td>
+          <td><a href="{{ url_for('sales.transaction_detail', sale_id=row.sale_id) }}">{{ row.original_receipt }}</a></td>
+          <td>{{ row.date.strftime('%d/%m/%Y') }} {{ row.time }}</td>
+          <td class="help">
+            {% for item in row.items %}{{ item.name }} x{{ item.quantity }}{% if not loop.last %}, {% endif %}{% endfor %}
+          </td>
+          <td>{{ row.reason }}</td>
+          <td>{{ row.method }}</td>
+          <td>{{ row.user }}</td>
+          <td class="num"><strong>{{ row.amount|money }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No refunds in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

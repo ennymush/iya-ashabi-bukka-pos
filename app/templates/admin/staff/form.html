@@ -1,0 +1,76 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, text_field, checkbox_field %}
+{% block title %}{{ 'Edit Staff' if staff else 'Add Staff' }} - {{ business.name }}{% endblock %}
+{% block topbar_title %}{{ 'Edit Staff' if staff else 'Add Staff' }}{% endblock %}
+
+{% block admin_content %}
+{% set is_edit = staff is not none %}
+{% call page_header('Edit Staff' if is_edit else 'Add Staff',
+                    'They can sign in immediately with the username and password you set here.') %}
+  <a class="btn btn-ghost" href="{{ url_for('staff.list_staff') }}">BACK TO STAFF</a>
+{% endcall %}
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><h2>Account details</h2></div>
+
+  <div class="form-grid">
+    {{ text_field('full_name', 'Full name', staff.full_name if is_edit else '', 'Example: John Doe', required=true) }}
+
+    {% if not is_edit %}
+      {{ text_field('username', 'Username', '', 'Lower case, no spaces. Example: john', required=true) }}
+    {% else %}
+      <div class="field">
+        <label>Username</label>
+        <input type="text" value="{{ staff.username }}" disabled>
+        <span class="help">Usernames cannot be changed once an account exists.</span>
+      </div>
+    {% endif %}
+
+    <div class="field">
+      <label for="role">Role</label>
+      <select id="role" name="role" required>
+        {% for role in roles %}
+          <option value="{{ role }}"
+            {{ 'selected' if is_edit and staff.role_name == role }}
+            {{ 'disabled' if role == 'ADMIN' and g.user.role_name != 'ADMIN' }}>
+            {{ role }}
+          </option>
+        {% endfor %}
+      </select>
+      <span class="help">
+        ADMIN: full control. MANAGER: reports and approvals. CASHIER: sells at the till only.
+      </span>
+    </div>
+
+    {% if not is_edit %}
+      {{ text_field('password', 'Password', '', 'At least 6 characters. Share it with the staff member.', type='password', required=true) }}
+      {{ text_field('confirm_password', 'Confirm password', '', '', type='password', required=true) }}
+    {% endif %}
+
+    {{ text_field('phone', 'Phone number', staff.phone if is_edit else '') }}
+    {{ text_field('email', 'Email address', staff.email if is_edit else '', '', type='email') }}
+
+    <div class="field">
+      <label for="max_discount_percent">Maximum discount this person may give (%)</label>
+      <input type="number" id="max_discount_percent" name="max_discount_percent" min="0" max="100" step="0.01"
+             value="{{ staff.max_discount_percent if is_edit and staff.max_discount_percent else '0' }}">
+      <span class="help">0 means no discount. Managers and administrators can override.</span>
+    </div>
+
+    <div class="field">
+      <label for="max_discount_amount">Maximum fixed discount (Naira)</label>
+      <input type="text" inputmode="decimal" id="max_discount_amount" name="max_discount_amount"
+             value="{{ staff.max_discount_amount if is_edit and staff.max_discount_amount is not none else '0' }}">
+      <span class="help">0 means no fixed discount limit.</span>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    {{ checkbox_field('is_active', 'Active (can sign in)', true if not is_edit else staff.is_active) }}
+    <span></span>
+    <a class="btn btn-ghost" href="{{ url_for('staff.list_staff') }}">CANCEL</a>
+    <button type="submit" class="btn btn-primary">{{ 'SAVE CHANGES' if is_edit else 'CREATE STAFF' }}</button>
+  </div>
+</form>
+{% endblock %}

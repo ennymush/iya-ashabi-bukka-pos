@@ -1,0 +1,213 @@
+{# First-run setup wizard. Each step posts back to itself. #}
+{% extends "base.html" %}
+{% from "_ui.html" import text_field, checkbox_field, money_field %}
+{% block title %}Setup {{ number }} of {{ total }} - {{ business.name }}{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block chrome %}{% endblock %}
+
+{% block content %}
+<div class="login-card" style="max-width:640px;">
+
+  <div style="display:flex;gap:.25rem;margin-bottom:1rem;flex-wrap:wrap;" aria-label="Setup progress">
+    {% for step_number, step_title in steps %}
+      <span title="{{ step_title }}"
+            style="flex:1;height:.4rem;border-radius:2px;min-width:14px;
+                   background: {{ 'var(--orange-500)' if step_number <= number else 'var(--line)' }};"
+            aria-current="{{ 'step' if step_number == number else 'false' }}"></span>
+    {% endfor %}
+  </div>
+  <p class="help" style="text-align:center;">Step {{ number }} of {{ total }}</p>
+
+  <div class="login-brand">
+    <div class="brand-mark" aria-hidden="true">IAB</div>
+    <h1>{{ title }}</h1>
+    <div class="tagline">{{ business.name }}</div>
+  </div>
+
+  <form method="post" autocomplete="off" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {# ---------------- Step 1: Business information ---------------- #}
+    {% if number == 1 %}
+      <p class="help">These details appear on your receipts and customer display. You can
+         change them later in Admin &rarr; Settings.</p>
+      <div class="form-grid" style="text-align:left;">
+        {{ text_field('name', 'Business name', business.name, required=true) }}
+        {{ text_field('tagline', 'Tagline', business.tagline) }}
+        {{ text_field('address_line1', 'Address line 1', business.address_line1) }}
+        {{ text_field('address_line2', 'Address line 2', business.address_line2) }}
+        {{ text_field('address_city', 'City / State', business.address_city) }}
+        {{ text_field('phone', 'Phone number', business.phone) }}
+        {{ text_field('phone_2', 'Second phone number', business.phone_2) }}
+        {{ text_field('email', 'Email address', business.email, '', type='email') }}
+        {{ text_field('receipt_footer', 'Receipt footer message', business.receipt_footer) }}
+        {{ text_field('promo_message', 'Promotional message', business.promo_message) }}
+      </div>
+
+    {# ---------------- Step 2: Administrator ---------------- #}
+    {% elif number == 2 %}
+      <div class="info-box" style="text-align:left;">
+        You are creating the owner account. There is no default username or password -
+        choose your own now. Only a secure hash of the password is stored.
+      </div>
+      <div class="form-grid" style="text-align:left;">
+        {{ text_field('full_name', 'Your full name', '', 'Example: Mrs Iya Ashabi', required=true) }}
+        {{ text_field('username', 'Username', '', 'Lower case, no spaces', required=true) }}
+        {{ text_field('password', 'Password', '', 'At least 6 characters', type='password', required=true) }}
+        {{ text_field('confirm_password', 'Confirm password', '', '', type='password', required=true) }}
+        {{ text_field('phone', 'Phone number', '') }}
+        {{ text_field('email', 'Email address', '', '', type='email') }}
+      </div>
+
+    {# ---------------- Step 3: Printer ---------------- #}
+    {% elif number == 3 %}
+      <p class="help">Choose your receipt printer. If you are not ready, keep test mode -
+         you can change this at any time.</p>
+      <div class="form-grid" style="text-align:left;">
+        <div class="field">
+          <label for="printer_mode">Printer type</label>
+          <select id="printer_mode" name="printer_mode">
+            <option value="mock">Test printer (no hardware needed)</option>
+            {% for name in printers %}
+              <option value="windows">{{ name }} (Windows printer)</option>
+            {% endfor %}
+            <option value="escpos">Thermal ESC/POS printer</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="printer_name">Printer name</label>
+          <select id="printer_name" name="printer_name">
+            <option value="">Choose later</option>
+            {% for name in printers %}
+              <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="paper_width_mm">Paper width</label>
+          <select id="paper_width_mm" name="paper_width_mm">
+            {% for value, label in paper_choices %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+{# ---------------- Step 4: Customer display ---------------- #}
+    {% elif number == 4 %}
+      <p class="help">The customer display shows the items and total on your second screen.</p>
+      <div class="form-grid" style="text-align:left;">
+        {{ checkbox_field('enabled', 'Use a customer display', display_settings.get('display.enabled') == '1') }}
+        {{ checkbox_field('display_second_monitor', 'Use the second monitor', display_settings.get('hardware.display_second_monitor') == '1') }}
+        {{ text_field('welcome_message', 'Welcome message', display_settings.get('display.welcome_message', 'Welcome')) }}
+        {{ text_field('thankyou_message', 'Thank you message', display_settings.get('display.thankyou_message', '')) }}
+        {{ text_field('promotional_message', 'Promotional message (optional)', display_settings.get('display.promotional_message', '')) }}
+        {{ checkbox_field('fullscreen', 'Open the customer display fullscreen', display_settings.get('display.fullscreen') == '1') }}
+        <div class="field">
+          <label>Detected monitors</label>
+          <span class="help">
+            {% if monitors %}
+              {% for monitor in monitors %}{{ monitor.label }} ({{ monitor.width }}x{{ monitor.height }}){% if not loop.last %}, {% endif %}{% endfor %}
+            {% else %}Detection is only available on Windows.{% endif %}
+          </span>
+        </div>
+      </div>
+
+    {# ---------------- Step 5: Cash drawer ---------------- #}
+    {% elif number == 5 %}
+      <p class="help">If your cash drawer plugs into the receipt printer, it opens
+         automatically when a cash sale is completed.</p>
+      <div class="form-grid" style="text-align:left;">
+        <div class="field">
+          <label for="drawer_mode">Cash drawer</label>
+          <select id="drawer_mode" name="drawer_mode">
+            <option value="mock">Test drawer (no hardware needed)</option>
+            <option value="printer">Connected to the receipt printer</option>
+          </select>
+        </div>
+        {{ text_field('drawer_pin', 'Drawer pin', '2', 'Most printers use pin 2') }}
+        {{ text_field('drawer_pulse_ms', 'Pulse length (milliseconds)', '120') }}
+      </div>
+
+    {# ---------------- Step 6: First cashier ---------------- #}
+    {% elif number == 6 %}
+      <p class="help">Create the first cashier account now, or leave it blank and add staff
+         later in Admin &rarr; Staff.</p>
+      <div class="form-grid" style="text-align:left;">
+        {{ text_field('full_name', 'Cashier full name', '', 'Example: John Doe') }}
+        {{ text_field('username', 'Username', '', 'Example: john') }}
+        {{ text_field('password', 'Password', '', 'At least 6 characters', type='password') }}
+        {{ text_field('confirm_password', 'Confirm password', '', '', type='password') }}
+        {{ text_field('phone', 'Phone number (optional)', '') }}
+        {{ text_field('max_discount_percent', 'Maximum discount (%)', '0', '0 means this cashier cannot discount') }}
+        {{ money_field('max_discount_amount', 'Maximum discount per sale', '0', '0 means no limit') }}
+      </div>
+
+
+{# ---------------- Step 7: Test hardware ---------------- #}
+    {% elif number == 7 %}
+      <p class="help">Test each device. A failure here never stops you - you can fix it in
+         Admin &rarr; Settings &rarr; Hardware.</p>
+      {% if session.get('setup_last_test') %}
+        {% set last = session['setup_last_test'] %}
+        <div class="info-box" style="text-align:left;">
+          <strong>{{ last.device|upper }}:</strong>
+          <span class="badge {{ 'badge-success' if last.ok else 'badge-danger' }}">
+            {{ 'OK' if last.ok else 'FAILED' }}</span>
+          {{ last.message }}
+        </div>
+      {% endif %}
+      <div class="table-wrap" style="text-align:left;">
+        <table>
+          <thead><tr><th>Device</th><th></th></tr></thead>
+          <tbody>
+            {% for device, label in [('printer', 'Receipt printer'), ('drawer', 'Cash drawer'),
+                                     ('display', 'Customer display'), ('scanner', 'Barcode scanner')] %}
+            <tr>
+              <td>{{ label }}</td>
+              <td>
+                <button class="btn btn-ghost btn-sm" type="submit" name="device" value="{{ device }}">
+                  TEST {{ label|upper }}
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box">Ready to continue? Press Continue below.</div>
+
+    {# ---------------- Step 8: Finish ---------------- #}
+    {% else %}
+      <div class="info-box" style="text-align:left;">
+        <strong>Setup is complete.</strong> Sign in with the administrator account you created
+        in step 2. Then:
+        <ul style="margin:.5rem 0 0 1rem;line-height:1.9;">
+          <li>Add your products in <strong>Admin &rarr; Products</strong>.</li>
+          <li>Add more cashiers in <strong>Admin &rarr; Staff</strong>.</li>
+          <li>Take your first backup in <strong>Admin &rarr; Settings &rarr; Database</strong>.</li>
+        </ul>
+      </div>
+      <div class="hint-box" style="text-align:left;">
+        <strong>Your password recovery code is ready.</strong> Save it somewhere safe so a
+        forgotten administrator password can always be reset.
+        <div class="form-actions" style="margin-top:.75rem;">
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('setup.show_recovery_code') }}"
+             target="_blank" rel="noopener">SHOW RECOVERY CODE</a>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="form-actions" style="margin-top:1.5rem;">
+      {% if number > 1 %}
+        <a class="btn btn-ghost" href="{{ url_for('setup.step', number=number - 1) }}">BACK</a>
+      {% else %}
+        <span></span>
+      {% endif %}
+      <button type="submit" class="btn btn-primary btn-lg">
+        {{ 'FINISH SETUP' if number == total else 'CONTINUE' }}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

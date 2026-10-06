@@ -1,0 +1,50 @@
+# ============================================================
+# Iya Ashabi Bukka Limited - POS
+# Keep business data, secrets and build output out of version control.
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- Local configuration and secrets ---
+.env
+*.key
+
+# --- Runtime business data (never commit) ---
+instance/
+data/
+logs/
+uploads/
+backups/
+_devdata/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite3
+*.xlsx
+
+# --- Test and tooling caches ---
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- Packaging output ---
+build/
+dist/
+*.manifest
+
+# --- Editor / OS noise ---
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini
+.DS_Store

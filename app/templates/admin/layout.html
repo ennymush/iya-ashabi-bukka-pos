@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Admin - {{ business.name }}{% endblock %}
+
+{% block chrome %}
+<div class="admin-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="mark">IAB</div>
+      <div>
+        <div class="name">{{ business.name }}</div>
+        <div class="tag">{{ business.tagline }}</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Admin navigation">
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.dashboard' }}">
+        <span class="ico">&#127968;</span> Dashboard
+      </a>
+      <a href="{{ url_for('pos.index') }}" class="nav-link {{ 'active' if request.endpoint == 'pos.index' }}">
+        <span class="ico">&#128179;</span> POS (Till)
+      </a>
+
+      {% if g.user.has_any_permission('sales.view') %}
+      <div class="nav-group-label">Sales</div>
+      <a href="{{ url_for('sales.transactions') }}" class="nav-link {{ 'active' if request.endpoint == 'sales.transactions' }} nav-sublink">
+        <span class="ico">&#128203;</span> Transactions
+      </a>
+      {% if g.user.has_any_permission('sales.refund') %}
+      <a href="{{ url_for('sales.returns_list') }}" class="nav-link {{ 'active' if request.endpoint == 'sales.returns_list' }} nav-sublink">
+        <span class="ico">&#8617;</span> Returns
+      </a>
+      {% endif %}
+      <a href="{{ url_for('sales.voids_list') }}" class="nav-link {{ 'active' if request.endpoint == 'sales.voids_list' }} nav-sublink">
+        <span class="ico">&#10005;</span> Voids
+      </a>
+      {% endif %}
+
+      {% if g.user.has_any_permission('products.view') %}
+      <div class="nav-group-label">Products</div>
+      <a href="{{ url_for('products.list_products') }}" class="nav-link {{ 'active' if request.endpoint == 'products.list_products' }} nav-sublink">
+        <span class="ico">&#127828;</span> All Products
+      </a>
+      {% if g.user.has_any_permission('products.manage') %}
+      <a href="{{ url_for('products.create_product') }}" class="nav-link {{ 'active' if request.endpoint == 'products.create_product' }} nav-sublink">
+        <span class="ico">&#10133;</span> Add Product
+      </a>
+      {% endif %}
+      {% if g.user.has_any_permission('products.categories') %}
+      <a href="{{ url_for('products.categories') }}" class="nav-link {{ 'active' if request.endpoint == 'products.categories' }} nav-sublink">
+        <span class="ico">&#127991;</span> Categories
+      </a>
+      {% endif %}
+      <a href="{{ url_for('products.price_history') }}" class="nav-link {{ 'active' if request.endpoint == 'products.price_history' }} nav-sublink">
+        <span class="ico">&#128200;</span> Price History
+      </a>
+      {% endif %}
+
+      {% if g.user.has_any_permission('inventory.view') %}
+      <div class="nav-group-label">Inventory</div>
+      <a href="{{ url_for('inventory.stock_list') }}" class="nav-link {{ 'active' if request.endpoint in ('inventory.stock_list', 'inventory.low_stock') }} nav-sublink">
+        <span class="ico">&#128230;</span> Stock
+      </a>
+      <a href="{{ url_for('inventory.adjustments') }}" class="nav-link {{ 'active' if request.endpoint == 'inventory.adjustments' }} nav-sublink">
+        <span class="ico">&#128260;</span> Adjustments
+      </a>
+      <a href="{{ url_for('inventory.low_stock') }}" class="nav-link {{ 'active' if request.endpoint == 'inventory.low_stock' }} nav-sublink">
+        <span class="ico">&#9888;</span> Low Stock
+      </a>
+      {% endif %}
+
+      {% if g.user.has_any_permission('staff.view') %}
+      <div class="nav-group-label">Staff</div>
+      <a href="{{ url_for('staff.list_staff') }}" class="nav-link {{ 'active' if request.endpoint == 'staff.list_staff' }} nav-sublink">
+        <span class="ico">&#128101;</span> Staff &amp; Cashiers
+      </a>
+      {% if g.user.has_any_permission('shifts.manage') %}
+      <a href="{{ url_for('reports.shift_report') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.shift_report' }} nav-sublink">
+        <span class="ico">&#9200;</span> Shifts
+      </a>
+      {% endif %}
+      {% if g.user.has_any_permission('staff.permissions') %}
+      <a href="{{ url_for('staff.permissions') }}" class="nav-link {{ 'active' if request.endpoint == 'staff.permissions' }} nav-sublink">
+        <span class="ico">&#128274;</span> Permissions
+      </a>
+      {% endif %}
+      {% endif %}
+
+      {% if g.user.has_any_permission('reports.view') %}
+      <div class="nav-group-label">Reports</div>
+      <a href="{{ url_for('reports.sales_report') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.sales_report' }} nav-sublink">
+        <span class="ico">&#128202;</span> Sales
+      </a>
+      <a href="{{ url_for('reports.product_report') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.product_report' }} nav-sublink">
+        <span class="ico">&#127828;</span> Products
+      </a>
+      <a href="{{ url_for('reports.cashier_report') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.cashier_report' }} nav-sublink">
+        <span class="ico">&#128188;</span> Cashiers
+      </a>
+      <a href="{{ url_for('reports.payment_report') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.payment_report' }} nav-sublink">
+        <span class="ico">&#128179;</span> Payments
+      </a>
+      <a href="{{ url_for('reports.inventory_report') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.inventory_report' }} nav-sublink">
+        <span class="ico">&#128230;</span> Inventory
+      </a>
+      {% if g.user.has_any_permission('reports.profit') %}
+      <a href="{{ url_for('reports.profit_report') }}" class="nav-link {{ 'active' if request.endpoint == 'reports.profit_report' }} nav-sublink">
+        <span class="ico">&#128200;</span> Profit
+      </a>
+      {% endif %}
+      <a href="{{ url_for('reports.refund_report') }}" class="nav-link nav-sublink"><span class="ico">&#8617;</span> Refunds</a>
+      <a href="{{ url_for('reports.void_report') }}" class="nav-link nav-sublink"><span class="ico">&#10005;</span> Voids</a>
+      {% endif %}
+
+      {% if g.user.has_any_permission('audit.view') %}
+      <div class="nav-group-label">Security</div>
+      <a href="{{ url_for('admin.audit_logs') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.audit_logs' }}">
+        <span class="ico">&#128220;</span> Audit Logs
+      </a>
+      {% endif %}
+
+      {% if g.user.has_any_permission('settings.business') or g.user.has_any_permission('settings.hardware') %}
+      <div class="nav-group-label">Settings</div>
+      {% if g.user.has_any_permission('settings.business') %}
+      <a href="{{ url_for('admin.settings_business') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.settings_business' }} nav-sublink">
+        <span class="ico">&#127970;</span> Business Information
+      </a>
+      <a href="{{ url_for('admin.settings_system') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.settings_system' }} nav-sublink">
+        <span class="ico">&#9881;</span> System
+      </a>
+      {% endif %}
+      {% if g.user.has_any_permission('settings.hardware') %}
+      <a href="{{ url_for('admin.settings_hardware') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.settings_hardware' }} nav-sublink">
+        <span class="ico">&#128424;</span> Hardware
+      </a>
+      {% endif %}
+      {% if g.user.has_any_permission('settings.receipt') %}
+      <a href="{{ url_for('admin.settings_receipt') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.settings_receipt' }} nav-sublink">
+        <span class="ico">&#129534;</span> Receipt
+      </a>
+      {% endif %}
+      {% if g.user.has_any_permission('settings.display') %}
+      <a href="{{ url_for('admin.settings_display') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.settings_display' }} nav-sublink">
+        <span class="ico">&#128250;</span> Customer Display
+      </a>
+      {% endif %}
+      {% if g.user.has_any_permission('settings.database') %}
+      <a href="{{ url_for('admin.settings_database') }}" class="nav-link {{ 'active' if request.endpoint == 'admin.settings_database' }} nav-sublink">
+        <span class="ico">&#128190;</span> Database &amp; Backup
+      </a>
+      {% endif %}
+      {% endif %}
+
+      <div class="nav-group-label">Account</div>
+      <a href="{{ url_for('auth.change_password') }}" class="nav-link nav-sublink"><span class="ico">&#128273;</span> Change Password</a>
+      <a href="{{ url_for('auth.logout') }}" class="nav-link nav-sublink"><span class="ico">&#128682;</span> Logout</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar">{{ g.user.initials }}</div>
+        <div>
+          <div class="who">{{ g.user.full_name }}</div>
+          <div class="role">{{ g.user.role_name }}</div>
+        </div>
+      </div>
+      <div style="opacity:.6;">v1.0 &middot; Local POS</div>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <button class="btn btn-ghost btn-sm sidebar-toggle" id="sidebar-toggle" aria-label="Toggle menu">&#9776;</button>
+      <span class="title">{% block topbar_title %}Administration{% endblock %}</span>
+      <div class="right">
+        <span class="clock" id="admin-clock">&mdash;</span>
+        <a href="{{ url_for('pos.index') }}" class="btn btn-primary btn-sm">Open POS</a>
+      </div>
+    </header>
+    <div class="admin-content">
+      {% block admin_content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% block admin_scripts %}{% endblock %}
+{% endblock %}

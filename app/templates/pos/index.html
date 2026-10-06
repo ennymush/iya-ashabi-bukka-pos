@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+{% block title %}Point of Sale - {{ business.name }}{% endblock %}
+{% block body_class %}pos-body{% endblock %}
+{% block chrome %}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- ===================== HEADER ===================== -->
+<header class="pos-header">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">IAB</div>
+    <div>
+      <div class="name">{{ business.name }}</div>
+      <div class="tag">{{ business.tagline }}</div>
+    </div>
+  </div>
+  <div class="meta">
+    <div class="pill">
+      <span>Cashier</span>
+      <strong>{{ user.full_name }}</strong>
+    </div>
+    <div class="pill">
+      <span>Shift</span>
+      <strong>
+        {% if shift %}
+          <span class="shift-badge shift-open">OPEN</span>
+        {% else %}
+          <span class="shift-badge shift-closed">CLOSED</span>
+        {% endif %}
+      </strong>
+    </div>
+    <div class="pill">
+      <span id="pos-clock">&mdash;</span>
+    </div>
+    <a href="{{ url_for('pos.my_transactions') }}" class="btn btn-ghost btn-sm">My Sales</a>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm">Logout</a>
+  </div>
+</header>
+
+<div class="pos-layout">
+  <!-- ===================== LEFT: CATALOG ===================== -->
+  <section class="pos-main">
+    <div class="pos-toolbar">
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <span class="icon" aria-hidden="true">&#128269;</span>
+          <input type="search" id="pos-search" placeholder="Search or scan a product (name, SKU or barcode)"
+                 autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Search products">
+        </div>
+        <button type="button" class="btn btn-ghost" id="btn-clear-search" title="Clear search">&#10005;</button>
+      </div>
+      <div class="scan-hint">
+        <span aria-hidden="true">&#128241;</span>
+        <span>Tip: scan a barcode or press <kbd>F1</kbd> to search &middot; <kbd>F2</kbd> hold &middot; <kbd>F4</kbd> payment &middot; <kbd>F5</kbd> clear cart</span>
+      </div>
+      <div class="category-row" id="category-row" role="tablist" aria-label="Product categories">
+        <button type="button" class="cat-btn active" data-category="" role="tab" aria-selected="true">All</button>
+        {% for category in categories %}
+          <button type="button" class="cat-btn" data-category="{{ category.id }}" role="tab" aria-selected="false">{{ category.name }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="product-grid" id="product-grid" aria-live="polite">
+      {% for product in products %}
+        <button type="button"
+                class="product-card {{ 'out' if product.stock_quantity <= 0 }} {{ 'low' if product.stock_status == 'LOW STOCK' }}"
+                data-product-id="{{ product.id }}"
+                data-barcode="{{ product.barcode or '' }}"
+                data-sku="{{ product.sku or '' }}"
+                data-name="{{ product.name }}"
+                {{ 'disabled' if product.stock_quantity <= 0 and not allow_negative }}>
+          {% if product.stock_quantity <= 0 %}
+            <span class="tag-corner out">OUT</span>
+          {% elif product.stock_status == 'LOW STOCK' %}
+            <span class="tag-corner low">LOW</span>
+          {% endif %}
+          <span class="p-name">{{ product.name }}</span>
+          <span class="p-price">{{ product.selling_price|money }}</span>
+          {% if show_prices %}
+            <span class="p-stock">Stock: {{ product.stock_quantity }} {{ product.unit }}</span>
+          {% endif %}
+        </button>
+      {% else %}
+        <div class="empty" style="grid-column: 1/-1;">
+          <div class="empty-icon">&#127860;</div>
+          <h3>No products yet</h3>
+          <p>Ask your manager to add products in <strong>Admin &rarr; Products</strong>.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ===================== RIGHT: CART ===================== -->
+  <aside class="pos-cart-panel" aria-label="Current sale">
+    <div class="cart-head">
+      <h2>CURRENT SALE</h2>
+      <span class="count" id="cart-count">{{ cart.item_count }} item{{ '' if cart.item_count == 1 else 's' }}</span>
+    </div>
+
+    <div class="cart-items" id="cart-items">
+      <div class="cart-empty" id="cart-empty">
+        <div class="big">&#128722;</div>
+        <p>Cart is empty</p>
+        <p style="font-size:.82rem;">Tap a product or scan a barcode to begin.</p>
+      </div>
+    </div>
+
+    <div class="cart-totals">
+      <div class="tot-row"><span class="lbl">Subtotal</span><span class="val" id="t-subtotal">{{ cart.subtotal|money }}</span></div>
+      <div class="tot-row discount">
+        <span class="lbl">Discount
+          {% if discount_spec %}
+            <button type="button" id="btn-remove-discount" class="btn btn-ghost btn-sm" style="min-height:22px;padding:0 .35rem;">&#10005;</button>
+          {% endif %}
+        </span>
+        <span class="val" id="t-discount">{{ cart.discount|money }}</span>
+      </div>
+      <div class="tot-row {{ 'discount' }}" id="tax-row" style="display: {{ 'flex' if cart.tax else 'none' }};">
+        <span class="lbl">Tax</span><span class="val" id="t-tax">{{ cart.tax|money }}</span>
+      </div>
+      <div class="tot-row grand">
+        <span class="lbl">TOTAL</span><span class="val" id="t-total">{{ cart.total|money }}</span>
+      </div>
+    </div>
+
+    <div class="cart-actions">
+      <div class="pay-grid" id="pay-grid" role="group" aria-label="Payment method">
+        {% for method in payment_methods %}
+          <button type="button" class="pay-btn {{ 'active' if method == 'CASH' }}" data-method="{{ method }}">{{ method }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="action-grid">
+        {% if can_hold %}<button type="button" class="btn btn-ghost" id="btn-hold" title="Hold this sale (F2)">HOLD</button>{% endif %}
+        <button type="button" class="btn btn-ghost" id="btn-retrieve" title="Retrieve a held sale (F3)">RETRIEVE</button>
+        <button type="button" class="btn btn-ghost" id="btn-discount" title="Apply a discount">DISCOUNT</button>
+        <button type="button" class="btn btn-ghost" id="btn-clear-cart" title="Clear cart (F5)">CLEAR</button>
+        <button type="button" class="btn btn-ghost" id="btn-shift" title="{{ 'Close' if shift else 'Open' }} shift">SHIFT</button>
+        <button type="button" class="btn btn-ghost" id="btn-print-last" title="Reprint last receipt (F6)">REPRINT</button>
+      </div>
+
+      <button type="button" class="complete-btn" id="btn-complete" {{ 'disabled' if cart.item_count == 0 }}>
+        COMPLETE SALE &middot; <span id="complete-total">{{ cart.total|money }}</span>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal-backdrop" id="modal-payment" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="payment-title">
+    <div class="modal-head">
+      <h3 id="payment-title">Take Payment</h3>
+      <button type="button" class="modal-close" data-close="modal-payment" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="amount-display">
+        <div class="lbl">Amount Due</div>
+        <div class="amt" id="pay-due">&nbsp;</div>
+        <div class="due" id="pay-change-line"></div>
+      </div>
+      <div class="quick-cash" id="quick-cash"></div>
+      <div class="keypad" id="keypad">
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button>
+        <button type="button" data-key="8">8</button>
+        <button type="button" data-key="9">9</button>
+        <button type="button" data-key=".">.</button>
+        <button type="button" data-key="0">0</button>
+        <button type="button" data-key="clear">C</button>
+      </div>
+      <div class="field" style="margin-top:.9rem;">
+        <label for="pay-method-amount">Amount received</label>
+        <input type="text" id="pay-method-amount" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+      <div class="err-box" id="pay-error" hidden></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close="modal-payment">Cancel</button>
+      <button type="button" class="btn btn-green btn-lg" id="btn-confirm-payment">CONFIRM PAYMENT</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-success" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-body">
+      <div class="sale-result ok">
+        <div class="icon" aria-hidden="true">&#9989;</div>
+        <div class="small" style="text-transform:uppercase;letter-spacing:.1em;color:var(--green-600);font-weight:700;">Payment Complete</div>
+        <div class="receipt-no" id="success-receipt"></div>
+        <div class="amount" id="success-total"></div>
+        <div class="change-box">
+          <div class="lbl">Change</div>
+          <div class="amt" id="success-change"></div>
+        </div>
+        <div class="warn-box" id="success-warning" hidden></div>
+        <p style="font-weight:600;">Thank you for your patronage!</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="btn-reprint" hidden>REPRINT RECEIPT</button>
+      <button type="button" class="btn btn-primary btn-lg" id="btn-next-customer">NEXT CUSTOMER</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-discount" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>Apply Discount</h3>
+      <button type="button" class="modal-close" data-close="modal-discount" aria-label="Close">&times;</button>
+    </div>
+    <form id="form-discount">
+      <div class="modal-body">
+        <div class="field">
+          <label for="disc-type">Discount type</label>
+          <select id="disc-type" name="type">
+            <option value="PERCENT">Percentage (%)</option>
+            <option value="FIXED">Fixed amount (&#8358;)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="disc-value">Amount</label>
+          <input type="text" id="disc-value" name="value" inputmode="decimal" placeholder="e.g. 10 or 500" required>
+        </div>
+        {% if not can_override_discount %}
+          <div class="info-box">
+            Your maximum discount is
+            {% if max_discount_percent %}<strong>{{ max_discount_percent }}%</strong>{% endif %}
+            {% if max_discount_amount and max_discount_amount > 0 %}{{ ' or ' if max_discount_percent else '' }}<strong>{{ max_discount_amount|money }}</strong>{% endif %}.
+            Ask a manager for anything larger.
+          </div>
+        {% endif %}
+        <div class="err-box" id="disc-error" hidden></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" data-close="modal-discount">Cancel</button>
+        <button type="submit" class="btn btn-primary">APPLY DISCOUNT</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-shift" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="shift-title">{{ 'Close Shift' if shift else 'Open Shift' }}</h3>
+      <button type="button" class="modal-close" data-close="modal-shift" aria-label="Close">&times;</button>
+    </div>
+    <form id="form-shift">
+      <div class="modal-body">
+        <div id="shift-open-fields">
+          <div class="field">
+            <label for="opening-cash">Opening cash float (&#8358;)</label>
+            <input type="text" id="opening-cash" name="opening_cash" inputmode="decimal" value="0.00" autocomplete="off">
+            <small class="help">The cash you are starting with, e.g. 50000.00</small>
+          </div>
+        </div>
+        <div id="shift-close-fields" hidden>
+          <div class="tot-row"><span class="lbl">Expected cash in drawer</span><span class="val" id="shift-expected">&mdash;</span></div>
+          <div class="field" style="margin-top:.7rem;">
+            <label for="actual-cash">Actual cash counted (&#8358;)</label>
+            <input type="text" id="actual-cash" name="actual_cash" inputmode="decimal" placeholder="0.00" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="shift-note">Note (optional)</label>
+            <input type="text" id="shift-note" name="note" placeholder="e.g. counted twice">
+          </div>
+          <div id="shift-result"></div>
+        </div>
+        <div class="err-box" id="shift-error" hidden></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" data-close="modal-shift">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="btn-shift-confirm">OPEN SHIFT</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-held" hidden>
+  <div class="modal wide" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>Held Sales</h3>
+      <button type="button" class="modal-close" data-close="modal-held" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Reference</th><th>Items</th><th>Total</th><th>Held</th><th>Action</th></tr></thead>
+          <tbody id="held-body"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="held-empty" hidden>
+        <div class="empty-icon">&#128230;</div>
+        <p>No held sales.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close="modal-held">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-area" id="toast-area" aria-live="polite"></div>
+<div class="loading-overlay" id="loading" hidden>Working&hellip;</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.IAB = {
+    csrfToken: {{ csrf_token()|tojson }},
+    hasShift: {{ 'true' if shift else 'false' }},
+    paymentMethods: {{ payment_methods|list|tojson }},
+    showPrices: {{ 'true' if show_prices else 'false' }},
+    lastSaleId: null
+  };
+</script>
+<script src="{{ url_for('static', filename='js/pos-api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pos-cart.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pos-scanner.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pos-payment.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pos-init.js') }}"></script>
+{% endblock %}

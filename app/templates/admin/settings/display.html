@@ -1,0 +1,63 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, text_field, checkbox_field %}
+{% block title %}Customer Display - {{ business.name }}{% endblock %}
+{% block topbar_title %}Customer Display{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Customer Display', 'What your customers see on the second screen.') %}
+  <a class="btn btn-ghost" href="{{ url_for('customer.display') }}" target="_blank" rel="noopener">OPEN PREVIEW</a>
+{% endcall %}
+
+<form method="post" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><h2>Display settings</h2></div>
+
+  <div class="form-grid">
+    {{ checkbox_field('enabled', 'Customer display is switched on', display.get('display.enabled') == '1') }}
+    {{ text_field('welcome_message', 'Welcome message', display.get('display.welcome_message', 'Welcome'), 'Shown when no sale is in progress.') }}
+    {{ text_field('thankyou_message', 'Thank you message', display.get('display.thankyou_message', ''), 'Shown after a completed payment.') }}
+    {{ text_field('promotional_message', 'Promotional message', display.get('display.promotional_message', ''), 'Optional. Rotates on the welcome screen.') }}
+    {{ checkbox_field('show_totals', 'Show totals on the customer screen', display.get('display.show_totals') == '1') }}
+    {{ checkbox_field('show_date_time', 'Show date and time', display.get('display.show_date_time') == '1') }}
+    {{ checkbox_field('fullscreen', 'Open the customer display fullscreen', display.get('display.fullscreen') == '1') }}
+  </div>
+
+  <div class="info-box">
+    The customer display never shows prices you paid for, cost prices, profit, stock levels
+    or any admin controls.
+  </div>
+
+  <div class="form-actions">
+    <span></span>
+    <button type="submit" class="btn btn-primary">SAVE DISPLAY SETTINGS</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-head"><h2>Detected monitors</h2></div>
+  {% if monitors %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Monitor</th><th>Resolution</th><th>Primary</th></tr></thead>
+      <tbody>
+        {% for monitor in monitors %}
+        <tr>
+          <td>{{ monitor.label }}</td>
+          <td>{{ monitor.width }} x {{ monitor.height }}</td>
+          <td>{{ 'Yes' if monitor.is_primary else 'No' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if monitors|length < 2 %}
+    <div class="info-box">
+      Only one monitor is attached. The customer display will open on the same screen,
+      which is fine for testing - it will appear as a separate window.
+    </div>
+  {% endif %}
+  {% else %}
+    <div class="info-box">Monitor detection is only available on Windows.</div>
+  {% endif %}
+</div>
+{% endblock %}

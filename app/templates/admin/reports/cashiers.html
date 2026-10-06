@@ -1,0 +1,60 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state %}
+{% block title %}Cashier Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Cashier Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Cashier Report', 'Sales, discounts, refunds and voids for each cashier.') %}
+  {% if g.user.has_any_permission('reports.print') %}
+    <a class="btn btn-ghost" href="{{ url_for('reports.print_view', type='cashiers', range=preset) }}">PRINT</a>
+  {% endif %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='cashiers') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.cashier_report'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Cashiers', rows|length, 'gold') }}
+  {{ stat_card('Total sales', rows|sum(attribute='total')|money, 'brown') }}
+  {{ stat_card('Transactions', rows|sum(attribute='transactions'), 'green') }}
+  {{ stat_card('Refunds', rows|sum(attribute='refunds')|money, 'red') }}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Cashier</th><th class="num">Transactions</th><th class="num">Sales</th>
+          <th class="num">Cash</th><th class="num">Transfer</th><th class="num">Card</th>
+          <th class="num">Discount</th><th class="num">Refunds</th><th class="num">Voids</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.name }}</strong></td>
+          <td class="num">{{ row.transactions }}</td>
+          <td class="num"><strong>{{ row.total|money }}</strong></td>
+          <td class="num">{{ row.cash|money }}</td>
+          <td class="num">{{ row.transfer|money }}</td>
+          <td class="num">{{ row.card|money }}</td>
+          <td class="num">{{ row.discount|money }}</td>
+          <td class="num">{{ row.refunds|money }}</td>
+          <td class="num">{{ row.voids|money }}</td>
+          <td class="num">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('staff.view_staff', user_id=row.cashier_id) }}">VIEW</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No cashier activity in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

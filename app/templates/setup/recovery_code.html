@@ -1,0 +1,36 @@
+{# Shown once during setup so the owner can write down the recovery code. #}
+{% extends "base.html" %}
+{% block title %}Recovery Code - {{ business.name }}{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block chrome %}{% endblock %}
+
+{% block content %}
+<div class="login-card" style="max-width:640px;">
+  <div class="login-brand">
+    <div class="brand-mark" aria-hidden="true">IAB</div>
+    <h1>Save Your Recovery Code</h1>
+    <div class="tagline">{{ business.name }}</div>
+  </div>
+
+  <div class="info-box" style="text-align:left;">
+    This code is the only way to recover a forgotten administrator password on an offline
+    system. It is shown <strong>this once only</strong> &mdash; only a secure hash is stored,
+    so nobody can read it again later.
+  </div>
+
+  <div style="font-size:1.9rem;font-weight:800;letter-spacing:.12em;text-align:center;padding:1.5rem;
+              background:#fff;border:2px dashed var(--orange-500);border-radius:8px;margin:1rem 0;
+              word-break:break-all;">{{ code }}</div>
+
+  <ol style="text-align:left;line-height:1.9;">
+    <li>Write this code on paper and store it with your business records.</li>
+    <li>Keep a sealed copy with a trusted family member or your accountant.</li>
+    <li>Do not keep it on the till computer or on a shared phone.</li>
+  </ol>
+
+  <div class="form-actions" style="margin-top:1.5rem;">
+    <button class="btn btn-ghost" type="button" onclick="window.print()">PRINT THIS PAGE</button>
+    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">I HAVE SAVED IT &mdash; CONTINUE</a>
+  </div>
+</div>
+{% endblock %}

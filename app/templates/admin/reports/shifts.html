@@ -1,0 +1,54 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, date_range_filter, status_badge, empty_state %}
+{% block title %}Shift Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Shift Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Shift Report', 'Cash reconciliation for every cashier shift.') %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='shifts') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.shift_report'), start, end, preset) }}
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Cashier</th><th>Opened</th><th>Closed</th>
+          <th class="num">Opening</th><th class="num">Expected</th>
+          <th class="num">Counted</th><th class="num">Variance</th>
+          <th class="num">Sales</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.cashier }}</strong></td>
+          <td>{{ row.opened_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ row.closed_at.strftime('%d/%m/%Y %H:%M') if row.closed_at else '-' }}</td>
+          <td class="num">{{ row.opening_cash|money }}</td>
+          <td class="num">{{ row.expected_cash|money if row.expected_cash is not none else '-' }}</td>
+          <td class="num">{{ row.actual_cash|money if row.actual_cash is not none else '-' }}</td>
+          <td class="num">
+            {% if row.variance is not none %}
+              <span class="badge {{ 'badge-success' if row.variance|int >= 0 else 'badge-danger' }}">
+                {{ row.variance|money }}
+              </span>
+            {% else %}-{% endif %}
+          </td>
+          <td class="num">{{ row.total_sales|money }}</td>
+          <td>{{ status_badge('OPEN' if not row.closed_at else 'CLOSED') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No shifts recorded in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

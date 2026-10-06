@@ -1,0 +1,66 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, text_field %}
+{% block title %}Business Information - {{ business.name }}{% endblock %}
+{% block topbar_title %}Business Information{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Business Information', 'These details appear on receipts, the customer display and every report.') %}
+  <a class="btn btn-ghost" href="{{ url_for('admin.settings_receipt') }}">RECEIPT SETTINGS</a>
+{% endcall %}
+
+<form method="post" enctype="multipart/form-data" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-head"><h2>Business details</h2></div>
+
+  <div class="form-grid">
+    {{ text_field('name', 'Business name', settings.name, required=true) }}
+    {{ text_field('tagline', 'Tagline', settings.tagline, 'Example: Good Food • Great Vibes') }}
+    {{ text_field('address_line1', 'Address line 1', settings.address_line1) }}
+    {{ text_field('address_line2', 'Address line 2', settings.address_line2) }}
+    {{ text_field('address_city', 'City / State', settings.address_city) }}
+    {{ text_field('country', 'Country', settings.country) }}
+    {{ text_field('phone', 'Phone number', settings.phone) }}
+    {{ text_field('phone_2', 'Second phone number', settings.phone_2) }}
+    {{ text_field('email', 'Email address', settings.email, '', type='email') }}
+    {{ text_field('tin', 'Tax / TIN number (optional)', settings.tin) }}
+    {{ text_field('receipt_footer', 'Receipt footer message', settings.receipt_footer) }}
+    {{ text_field('promo_message', 'Promotional message', settings.promo_message, 'Shown on the customer display.') }}
+    {{ text_field('currency_code', 'Currency code', settings.currency_code, 'NGN') }}
+    {{ text_field('currency_symbol', 'Currency symbol', settings.currency_symbol, '₦') }}
+  </div>
+
+  <div class="card-head" style="border-top:1px solid var(--line);"><h2>Logo</h2></div>
+  <div class="form-grid">
+    <div class="field">
+      <label for="logo">Business logo</label>
+      <input type="file" id="logo" name="logo" accept="image/*">
+      <span class="help">PNG or JPG. Used on receipts and the customer display.</span>
+    </div>
+    <div class="field">
+      <label>Current logo</label>
+      {% if settings.logo_path %}
+        <img src="/uploads/branding/{{ settings.logo_path }}" alt="Current logo"
+             style="max-height:80px;border:1px solid var(--line);border-radius:6px;padding:4px;background:#fff;">
+      {% else %}
+        <span class="help">No logo uploaded yet.</span>
+      {% endif %}
+    </div>
+    <div class="field">
+      <label for="promo_image">Promotional image (optional)</label>
+      <input type="file" id="promo_image" name="promo_image" accept="image/*">
+      {% if settings.promo_image %}
+        <img src="/uploads/branding/{{ settings.promo_image }}" alt="Promo image"
+             style="max-height:80px;border:1px solid var(--line);border-radius:6px;padding:4px;background:#fff;">
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="form-actions">
+    {% if settings.logo_path %}
+      <a class="btn btn-ghost" href="{{ url_for('admin.settings_business', remove_logo='1') }}">REMOVE LOGO</a>
+    {% endif %}
+    <span></span>
+    <button type="submit" class="btn btn-primary">SAVE BUSINESS INFORMATION</button>
+  </div>
+</form>
+{% endblock %}

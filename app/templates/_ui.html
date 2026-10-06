@@ -1,0 +1,96 @@
+{% macro page_header(title, subtitle='') %}
+<div class="page-header">
+  <div>
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<p class="subtitle">{{ subtitle }}</p>{% endif %}
+  </div>
+  <div class="page-header-actions">
+    {{ caller() if caller is defined else '' }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro stat_card(label, value, tone='brown', hint='') %}
+<div class="stat-card stat-{{ tone }}">
+  <span class="stat-label">{{ label }}</span>
+  <span class="stat-value">{{ value }}</span>
+  {% if hint %}<span class="stat-hint">{{ hint }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro date_range_filter(action, start, end, preset) %}
+<form method="get" action="{{ action }}" class="filter-bar">
+  <div class="filter-presets">
+    {% for key, label in [('today','Today'),('yesterday','Yesterday'),('week','This Week'),('month','This Month'),('all','All Time')] %}
+      <a class="chip {{ 'active' if preset == key }}" href="{{ action }}?range={{ key }}{% for k, v in request.args.items() if k not in ('range', 'page') %}&{{ k }}={{ v }}{% endfor %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <div class="filter-dates">
+    <label for="date_from">From</label>
+    <input type="date" id="date_from" name="date_from" value="{{ start.isoformat() if start else '' }}">
+    <label for="date_to">To</label>
+    <input type="date" id="date_to" name="date_to" value="{{ end.isoformat() if end else '' }}">
+    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+  </div>
+</form>
+{% endmacro %}
+{# Shared building blocks used across the admin screens. #}
+
+{% macro status_badge(status) %}
+{%- set tone = {'COMPLETED':'badge-success','VOIDED':'badge-danger','REFUNDED':'badge-warning','HELD':'badge-info','CANCELLED':'badge-muted','ACTIVE':'badge-success','INACTIVE':'badge-muted','IN STOCK':'badge-success','LOW STOCK':'badge-warning','OUT OF STOCK':'badge-danger','SUCCESS':'badge-success','FAILED':'badge-danger','OPEN':'badge-success','CLOSED':'badge-muted'} -%}
+<span class="badge {{ tone.get(status, 'badge-muted') }}">{{ status }}</span>
+{% endmacro %}
+
+{% macro stock_badge(product) %}
+{{ status_badge(product.stock_status) }}
+{% endmacro %}
+
+{% macro empty_state(message, hint='') %}
+<div class="empty">
+  <div class="empty-icon">&#128230;</div>
+  <h3>{{ message }}</h3>
+  {% if hint %}<p class="help">{{ hint }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro pagination(pager, action) %}
+{% if pager and pager.pages > 1 %}
+<div class="form-actions">
+  <span class="help">Page {{ pager.page }} of {{ pager.pages }} ({{ pager.total }} total)</span>
+  <span>
+    {% if pager.has_prev %}
+      <a class="btn btn-ghost btn-sm" href="{{ action }}?page={{ pager.prev_num }}{% for k, v in request.args.items() if k != 'page' %}&{{ k }}={{ v }}{% endfor %}">Previous</a>
+    {% endif %}
+    {% if pager.has_next %}
+      <a class="btn btn-ghost btn-sm" href="{{ action }}?page={{ pager.next_num }}{% for k, v in request.args.items() if k != 'page' %}&{{ k }}={{ v }}{% endfor %}">Next</a>
+    {% endif %}
+  </span>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro money_field(name, label, value='', hint='', required=false) %}
+<div class="field">
+  <label for="{{ name }}">{{ label }}</label>
+  <input type="text" inputmode="decimal" id="{{ name }}" name="{{ name }}"
+         value="{{ value if value is not none else '' }}"
+         placeholder="0.00" {{ 'required' if required }}>
+  {% if hint %}<span class="help">{{ hint }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro text_field(name, label, value='', hint='', type='text', required=false) %}
+<div class="field">
+  <label for="{{ name }}">{{ label }}</label>
+  <input type="{{ type }}" id="{{ name }}" name="{{ name }}"
+         value="{{ value if value is not none else '' }}" {{ 'required' if required }}>
+  {% if hint %}<span class="help">{{ hint }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro checkbox_field(name, label, checked=false, hint='') %}
+<div class="check">
+  <input type="checkbox" id="{{ name }}" name="{{ name }}" value="1" {{ 'checked' if checked }}>
+  <label for="{{ name }}">{{ label }}{% if hint %} <span class="help">({{ hint }})</span>{% endif %}</label>
+</div>
+{% endmacro %}

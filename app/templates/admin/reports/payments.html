@@ -1,0 +1,44 @@
+{% extends "admin/layout.html" %}
+{% from "_ui.html" import page_header, stat_card, date_range_filter, empty_state %}
+{% block title %}Payment Report - {{ business.name }}{% endblock %}
+{% block topbar_title %}Payment Report{% endblock %}
+
+{% block admin_content %}
+{% call page_header('Payment Report', 'How customers paid.') %}
+  {% if g.user.has_any_permission('reports.print') %}
+    <a class="btn btn-ghost" href="{{ url_for('reports.print_view', type='sales', range=preset) }}">PRINT</a>
+  {% endif %}
+  {% if g.user.has_any_permission('reports.export') %}
+    <a class="btn btn-primary" href="{{ url_for('reports.export', report_type='payments') }}?range={{ preset }}">EXPORT EXCEL</a>
+  {% endif %}
+{% endcall %}
+
+{{ date_range_filter(url_for('reports.payment_report'), start, end, preset) }}
+
+<div class="stat-grid">
+  {{ stat_card('Total received', rows|sum(attribute='amount')|money, 'brown') }}
+  {{ stat_card('Transactions', rows|sum(attribute='count'), 'gold') }}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Payment method</th><th class="num">Transactions</th><th class="num">Amount</th><th class="num">Share of sales</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.method }}</strong></td>
+          <td class="num">{{ row.count }}</td>
+          <td class="num">{{ row.amount|money }}</td>
+          <td class="num">{{ '%.1f'|format(row.share) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    {{ empty_state('No payments recorded in this period.') }}
+  {% endif %}
+</div>
+{% endblock %}

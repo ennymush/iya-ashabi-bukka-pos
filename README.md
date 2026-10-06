@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Iya Ashabi Bukka Limited — Point of Sale
 
 A **local-first** point-of-sale system built for Iya Ashabi Bukka Limited
@@ -673,3 +674,6 @@ the cloud do not.
 
 
 
+=======
+# iya-ashabi-bukka-pos
+>>>>>>> bdbc41345044081565c7525c2168de33f2e56c34
